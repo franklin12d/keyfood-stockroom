@@ -227,6 +227,10 @@ textarea.inp{padding:10px 12px;min-height:150px;resize:vertical;line-height:1.4}
 .fixbox{display:flex;gap:8px;align-items:flex-end;padding:8px 0 4px}
 .fixbox .inp{width:110px;font-family:var(--display);font-size:22px;font-weight:700}
 .pick{width:100%;background:none;border:0;border-top:1px solid #E6EBE8;text-align:left;padding:10px 0}
+.packnote{background:var(--blue-soft);color:var(--blue-ink);border-radius:10px;padding:8px 10px;font-size:13px;font-weight:600}
+.total{text-align:center;font-size:14px;color:var(--muted)}
+.total b{font-family:var(--display);font-size:22px;color:var(--ink)}
+.subbox{border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;background:var(--soft)}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));width:min(528px,calc(100% - 32px));background:var(--ink);color:#fff;border-radius:12px;padding:12px 14px;font-size:14px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:20;display:none}
 #toast.show{display:block}
 #toast.bad{background:var(--red)}
@@ -261,7 +265,7 @@ var S = {
   search: '', dept: 'All', adminQ: '', panelTab: 'products',
   pform: null, vform: null, uform: null, setForm: null, confirmDel: false,
   logFilter: 'all', session: [], busy: false, pending: {}, live: false,
-  delivery: null, photosLocal: [], deliveries: [], covers: {}, ordersQ: '', ordersLoaded: false, openDel: null, lightbox: null, pickTarget: null, orderMoves: [], manual: false, manualQ: '', fix: null
+  delivery: null, photosLocal: [], deliveries: [], covers: {}, ordersQ: '', ordersLoaded: false, openDel: null, lightbox: null, pickTarget: null, orderMoves: [], manual: false, manualQ: '', fix: null, packs: new Map()
 };
 try { S.delivery = JSON.parse(localStorage.getItem('kf_delivery') || 'null'); } catch (e) {}
 if (S.delivery) { S.vendor = S.delivery.vendor || ''; S.ref = S.delivery.ref || ''; }
@@ -304,7 +308,14 @@ var ERR = {
   TOO_LARGE: 'That photo is too large.',
   BAD_TYPE: 'Only photos (JPG, PNG, WebP) can be added.',
   IMAGE_READ: 'Could not read that photo. Try taking it again.',
-  UPLOAD_FAILED: 'The photo did not upload. Check the connection and try again.'
+  UPLOAD_FAILED: 'The photo did not upload. Check the connection and try again.',
+  PACK_NOT_FOUND: 'That case barcode is no longer linked to this product.',
+  PACK_MISMATCH: 'The case count does not match. Refresh and try again.',
+  BARCODE_IS_PACK: 'That barcode is already a case/pack of another product.',
+  BARCODE_IS_PRODUCT: 'That barcode is already a single-item product. A manager can merge it in Panel → Products.',
+  PACK_EXISTS: 'That case barcode is already linked. Ask a manager to change it.',
+  BAD_PACK_SIZE: 'Units inside must be 2 or more.',
+  SAME_PRODUCT: 'Pick a different product to merge into.'
 };
 function errMsg(e) {
   var m = (e && (e.message || e.details)) || String(e);
@@ -356,6 +367,22 @@ function loadProducts() {
     var m = new Map(); all.forEach(function (p) { m.set(p.upc, p); }); S.products = m;
   });
 }
+function loadPacks() {
+  return sb.from('kf_packs').select('*').limit(20000).then(function (r) {
+    if (r.error) throw r.error;
+    var m = new Map(); (r.data || []).forEach(function (k) { m.set(k.code, k); }); S.packs = m;
+  });
+}
+function packsFor(upc) {
+  var l = []; S.packs.forEach(function (k) { if (k.upc === upc) l.push(k); });
+  return l.sort(function (a, b) { return b.size - a.size; });
+}
+function searchText(p) { return p.name + ' ' + p.upc + ' ' + p.loc + ' ' + packsFor(p.upc).map(function (k) { return k.code; }).join(' '); }
+function casesText(p, q) {
+  var k = packsFor(p.upc)[0]; if (!k || q < k.size) return '';
+  var n = Math.floor(q / k.size), r = q % k.size;
+  return n + ' ' + k.label.toLowerCase() + (n === 1 ? '' : 's') + (r ? ' + ' + r : '');
+}
 function loadMoves(more) {
   var from = more ? S.moves.length : 0;
   return sb.from('kf_moves').select('*').order('at', { ascending: false }).range(from, from + 199).then(function (r) {
@@ -371,7 +398,7 @@ function loadToday() {
   });
 }
 function loadAll() {
-  return Promise.all([loadUsers(), loadVendors(), loadSettings(), loadProducts(), loadMoves(false), loadToday(), loadOrderMoves()]);
+  return Promise.all([loadUsers(), loadVendors(), loadSettings(), loadProducts(), loadMoves(false), loadToday(), loadOrderMoves(), loadPacks()]);
 }
 
 var channel = null;
@@ -391,6 +418,7 @@ function subscribe() {
       soon();
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'kf_vendors' }, function () { loadVendors().then(soon); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'kf_packs' }, function () { loadPacks().then(soon); })
     .subscribe(function (status) { S.live = status === 'SUBSCRIBED'; soon(); });
 }
 // safety net: full refresh every 2 minutes and when the app comes back to the foreground
@@ -461,7 +489,8 @@ function lowList() { return productList().filter(function (p) { return status(p)
 /* ---------- move rows ---------- */
 function moveRow(m) {
   var t = { in: ['Received', 't-in', 'c-in'], out: ['Pulled', 't-out', 'c-out'], adj: ['Adjusted', 't-adj', 'c-adj'] }[m.type] || ['Move', 't-adj', 'c-adj'];
-  var sub = [m.reason, m.vendor, m.ref ? 'Ref ' + m.ref : ''].filter(Boolean).join(' · ');
+  var pk = m.pack_code && m.pack_qty ? S.packs.get(m.pack_code) : null;
+  var sub = [m.pack_qty ? m.pack_qty + ' ' + (pk ? pk.label.toLowerCase() : 'case') + (m.pack_qty === 1 ? '' : 's') + (pk ? ' × ' + pk.size : '') : '', m.reason, m.vendor, m.ref ? 'Ref ' + m.ref : ''].filter(Boolean).join(' · ');
   return '<div class="row"><span class="tag ' + t[1] + '">' + t[0] + '</span><div class="grow"><span class="t1">' + esc(m.name) + '</span>' +
     '<span class="t2b">' + esc(m.user_name) + ' · ' + esc(fmtWhen(m.at)) + '</span><span class="t2">' + esc(sub) + '</span></div>' +
     '<span class="num ' + t[2] + '" style="font-size:20px">' + (m.delta > 0 ? '+' : '−') + Math.abs(m.delta) + '</span></div>';
@@ -613,10 +642,14 @@ function deliveryBlock() {
   if (!S.vendor) h += '<span class="t2">Select the vendor first, then add photos.</span>';
   return h;
 }
-function findProduct(code) {
+function findProduct(code) { var f = findCode(code); return f ? f.product : null; }
+function findCode(code) {
   var c = digits(code); if (!c) return null;
   var tries = [c, '0' + c, c.replace(/^0+/, '')];
-  for (var i = 0; i < tries.length; i++) { var p = S.products.get(tries[i]); if (p) return p; }
+  for (var i = 0; i < tries.length; i++) {
+    var p = S.products.get(tries[i]); if (p) return { product: p, pack: null };
+    var k = S.packs.get(tries[i]); if (k && S.products.get(k.upc)) return { product: S.products.get(k.upc), pack: k };
+  }
   return null;
 }
 function orderLines() {
@@ -658,7 +691,7 @@ function orderHtml() {
 function manualResults() {
   var q = S.manualQ.trim().toLowerCase();
   if (!q) return '<p class="empty" style="font-size:13px">Type at least one letter to find a product.</p>';
-  var l = productList().filter(function (p) { return (p.name + ' ' + p.upc + ' ' + p.loc).toLowerCase().indexOf(q) >= 0; }).slice(0, 8);
+  var l = productList().filter(function (p) { return searchText(p).toLowerCase().indexOf(q) >= 0; }).slice(0, 8);
   if (!l.length) return '<p class="empty" style="font-size:13px">No product matches. Use "New product" below.</p>';
   return l.map(function (p) {
     return '<button type="button" class="pick" data-act="manualPick" data-upc="' + esc(p.upc) + '"><span class="t1" style="display:block">' + esc(p.name) + '</span>' +
@@ -710,14 +743,24 @@ function resultHtml() {
   var out = S.mode === 'out';
   var p = sc.upc ? S.products.get(sc.upc) : null;
   if (p) {
-    return '<section class="result' + (out ? ' out' : '') + '"><div><div class="kicker ' + (out ? 'c-out' : 'c-in') + '">Product found</div>' +
-      '<div style="font-size:18px;font-weight:700">' + esc(p.name) + '</div><div class="mono t2" style="font-size:13px">' + esc(p.upc) + '</div>' +
-      '<div class="t2" style="font-size:13px">' + esc(p.dept) + ' · Location ' + esc(p.loc) + ' · On hand: <b style="color:var(--ink)">' + shownQty(p) + ' ' + esc(p.unit) + '</b></div></div>' +
-      stepperHtml(p.unit) +
-      '<div class="grid3"><button type="button" class="btn ghost" data-act="qty" data-n="6">+6</button><button type="button" class="btn ghost" data-act="qty" data-n="12">+12</button><button type="button" class="btn ghost" data-act="qty" data-n="24">+24</button></div>' +
+    var packs = packsFor(p.upc), k = sc.as && sc.as !== 'unit' ? S.packs.get(sc.as) : null;
+    var q = parseInt(S.qty, 10) || 0, units = k ? q * k.size : q, onh = shownQty(p), ct = casesText(p, onh);
+    var h = '<section class="result' + (out ? ' out' : '') + '"><div><div class="kicker ' + (out ? 'c-out' : 'c-in') + '">' + (sc.scannedPack && k ? k.label + ' barcode · ' : '') + 'Product found</div>' +
+      '<div style="font-size:18px;font-weight:700">' + esc(p.name) + '</div><div class="mono t2" style="font-size:13px">' + esc(sc.scannedPack && k ? k.code + ' → ' + p.upc : p.upc) + '</div>' +
+      '<div class="t2" style="font-size:13px">' + esc(p.dept) + ' · Location ' + esc(p.loc) + ' · On hand: <b style="color:var(--ink)">' + onh + ' ' + esc(p.unit) + '</b>' + (ct ? ' (' + esc(ct) + ')' : '') + '</div></div>';
+    if (packs.length) {
+      h += '<div class="seg" style="--n:' + (packs.length + 1) + '"><button type="button" class="' + (!k ? 'on' : '') + '" data-act="recvAs" data-v="unit">Units</button>' +
+        packs.map(function (x) { return '<button type="button" class="' + (k && k.code === x.code ? 'on' : '') + '" data-act="recvAs" data-v="' + esc(x.code) + '">' + esc(x.label) + ' ×' + x.size + '</button>'; }).join('') + '</div>';
+    }
+    if (k) h += '<div class="packnote">Counting in ' + esc(k.label.toLowerCase()) + 's · 1 ' + esc(k.label.toLowerCase()) + ' = ' + k.size + ' ' + esc(p.unit.toLowerCase()) + '</div>';
+    h += stepperHtml(k ? k.label + 's' : p.unit);
+    if (k) h += '<div class="total">Total: <b>' + fmtNum(units) + '</b> ' + esc(p.unit.toLowerCase()) + '</div>';
+    h += (k ? '<div class="grid3"><button type="button" class="btn ghost" data-act="qty" data-n="2">+2</button><button type="button" class="btn ghost" data-act="qty" data-n="5">+5</button><button type="button" class="btn ghost" data-act="qty" data-n="10">+10</button></div>'
+            : '<div class="grid3"><button type="button" class="btn ghost" data-act="qty" data-n="6">+6</button><button type="button" class="btn ghost" data-act="qty" data-n="12">+12</button><button type="button" class="btn ghost" data-act="qty" data-n="24">+24</button></div>') +
       '<div style="display:flex;gap:8px"><button type="button" class="btn ghost" data-act="cancelScan">Cancel</button>' +
       '<button type="button" class="btn ' + (out ? 'orange' : 'green') + '" style="flex:1" data-act="confirm"' + (S.busy ? ' disabled' : '') + '>' +
-      (out ? 'Confirm pull −' : 'Confirm receipt +') + S.qty + '</button></div></section>';
+      (out ? 'Confirm pull −' : 'Confirm receipt +') + (k ? q + ' ' + k.label.toLowerCase() + (q === 1 ? '' : 's') + ' (' + fmtNum(units) + ')' : q) + '</button></div></section>';
+    return h;
   }
   if (out) {
     return '<section class="result new"><div class="kicker c-out">Code not in the system</div><div class="mono">' + esc(sc.code) + '</div>' +
@@ -725,11 +768,12 @@ function resultHtml() {
       '<button type="button" class="btn ghost" data-act="mode" data-mode="in">Switch to Receive</button></section>';
   }
   var d = S.newP.dept || depts()[0];
+  if (!sc.manual && S.newP.kind === 'pack') return newPackHtml(sc, d);
   var head = sc.manual
     ? '<div><div class="kicker c-in">New product · added manually</div><p class="t2" style="margin:2px 0 0;font-size:13px">It is created and received into this order in one step.</p></div>' +
       '<label class="f">Barcode (optional)<input class="inp mono" inputmode="numeric" data-bind="newP.upc" value="' + esc(S.newP.upc || '') + '" placeholder="Leave blank for an in-store code"></label>'
     : '<div><div class="kicker c-out">Code not in the system</div><div class="mono" style="font-size:15px">' + esc(sc.code) + '</div>' +
-      '<p class="t2" style="margin:2px 0 0;font-size:13px">Create the product now and it is received in one step.</p></div>';
+      '<p class="t2" style="margin:2px 0 0;font-size:13px">Create the product now and it is received in one step.</p></div>' + kindSeg();
   return '<section class="result new">' + head +
     '<label class="f">Product name<input class="inp" data-bind="newP.name" value="' + esc(S.newP.name) + '" placeholder="e.g. Long grain rice 5 lb"></label>' +
     '<div class="grid2"><label class="f">Department<select class="inp" data-bind="newP.dept">' + depts().map(function (x) { return opt(x, d); }).join('') + '</select></label>' +
@@ -738,6 +782,41 @@ function resultHtml() {
     stepperHtml(S.newP.unit) +
     '<div style="display:flex;gap:8px"><button type="button" class="btn ghost" data-act="cancelScan">Cancel</button>' +
     '<button type="button" class="btn green" style="flex:1" data-act="createReceive"' + (S.busy ? ' disabled' : '') + '>Create and receive</button></div></section>';
+}
+function newPDefaults() { return { name: '', dept: '', loc: '', unit: 'Each', upc: '', kind: 'unit', packLabel: 'Case', packSize: '', link: 'existing', linkQ: '', linkUpc: '', unitUpc: '' }; }
+function kindSeg() {
+  return '<div><div style="font-size:13px;font-weight:700;margin-bottom:6px">What did you scan?</div><div class="seg"><button type="button" class="' + (S.newP.kind !== 'pack' ? 'on' : '') + '" data-act="newKind" data-v="unit">A single item</button>' +
+    '<button type="button" class="' + (S.newP.kind === 'pack' ? 'on' : '') + '" data-act="newKind" data-v="pack">A case or pack</button></div></div>';
+}
+function linkResults() {
+  var q = (S.newP.linkQ || '').trim().toLowerCase();
+  if (!q) return '<p class="empty" style="font-size:13px">Type the name or scan/type the single-item barcode.</p>';
+  var l = productList().filter(function (p) { return searchText(p).toLowerCase().indexOf(q) >= 0; }).slice(0, 6);
+  if (!l.length) return '<p class="empty" style="font-size:13px">Not found. Choose "New product" above.</p>';
+  return l.map(function (p) { return '<button type="button" class="pick" data-act="linkPick" data-upc="' + esc(p.upc) + '"><span class="t1" style="display:block">' + esc(p.name) + '</span><span class="t2 mono">' + esc(p.upc) + '</span></button>'; }).join('');
+}
+function newPackHtml(sc, d) {
+  var n = S.newP, size = parseInt(digits(n.packSize), 10) || 0, q = parseInt(S.qty, 10) || 0, lab = n.packLabel.toLowerCase();
+  var linked = n.linkUpc ? S.products.get(n.linkUpc) : null;
+  var h = '<section class="result new"><div><div class="kicker c-out">Code not in the system</div><div class="mono" style="font-size:15px">' + esc(sc.code) + '</div></div>' + kindSeg() +
+    '<div class="grid2"><label class="f">Type<select class="inp" data-bind="newP.packLabel"><option' + (n.packLabel === 'Case' ? ' selected' : '') + '>Case</option><option' + (n.packLabel === 'Pack' ? ' selected' : '') + '>Pack</option></select></label>' +
+    '<label class="f">Units inside<input class="inp num" style="font-size:22px" inputmode="numeric" data-bind="newP.packSize" value="' + esc(n.packSize) + '" placeholder="e.g. 24"></label></div>' +
+    '<div class="subbox"><div style="font-size:13px;font-weight:700">Which single item is inside?</div><div class="seg"><button type="button" class="' + (n.link === 'existing' ? 'on' : '') + '" data-act="newLink" data-v="existing">Existing product</button>' +
+    '<button type="button" class="' + (n.link === 'new' ? 'on' : '') + '" data-act="newLink" data-v="new">New product</button></div>';
+  if (n.link === 'existing') {
+    if (linked) h += '<div class="row" style="padding:4px 0;border:0"><div class="grow"><span class="t1">' + esc(linked.name) + '</span><span class="t2 mono">' + esc(linked.upc) + '</span></div><button type="button" class="btn ghost sm" data-act="linkClear">Change</button></div>';
+    else h += '<input class="inp" id="linkQ" data-bind="newP.linkQ" placeholder="Search name or single-item barcode" value="' + esc(n.linkQ) + '" autocomplete="off" aria-label="Find the single item"><div id="f-link">' + linkResults() + '</div>';
+  } else {
+    h += '<label class="f">Single-item name<input class="inp" data-bind="newP.name" value="' + esc(n.name) + '" placeholder="e.g. Spring water 16.9 oz"></label>' +
+      '<label class="f">Single-item barcode (optional)<input class="inp mono" inputmode="numeric" data-bind="newP.unitUpc" value="' + esc(n.unitUpc) + '" placeholder="Scan one bottle/can, or leave blank"></label>' +
+      '<div class="grid2"><label class="f">Department<select class="inp" data-bind="newP.dept">' + depts().map(function (x) { return opt(x, d); }).join('') + '</select></label>' +
+      '<label class="f">Location<input class="inp" data-bind="newP.loc" value="' + esc(n.loc) + '" placeholder="e.g. B-01"></label></div>';
+  }
+  h += '</div>' + stepperHtml(n.packLabel + 's') +
+    (size > 1 ? '<div class="total">' + q + ' ' + lab + (q === 1 ? '' : 's') + ' × ' + size + ' = <b>' + fmtNum(q * size) + '</b> units</div>' : '<div class="total">Enter the units inside to see the total.</div>') +
+    '<div style="display:flex;gap:8px"><button type="button" class="btn ghost" data-act="cancelScan">Cancel</button>' +
+    '<button type="button" class="btn green" style="flex:1" data-act="createReceive"' + (S.busy ? ' disabled' : '') + '>Save ' + lab + ' and receive</button></div></section>';
+  return h;
 }
 function stepperHtml(unit) {
   return '<div class="stepper"><button type="button" class="sbtn" aria-label="Subtract one" data-act="qty" data-n="-1">' + IC.minus + '</button>' +
@@ -763,7 +842,7 @@ function stockFiltered() {
   return productList().filter(function (p) {
     if (S.dept === '__low' && status(p).rank === 2) return false;
     if (S.dept !== 'All' && S.dept !== '__low' && p.dept !== S.dept) return false;
-    return !q || (p.name + ' ' + p.upc + ' ' + p.loc).toLowerCase().indexOf(q) >= 0;
+    return !q || searchText(p).toLowerCase().indexOf(q) >= 0;
   });
 }
 function stockChips() {
@@ -781,7 +860,7 @@ function stockHtml() {
       '<span class="t2"><span class="mono">' + esc(p.upc) + '</span> · ' + esc(p.loc) + '</span></div>' +
       '<div style="display:flex;align-items:center;gap:6px"><span class="pill ' + st.cls + '">' + st.label + '</span>' +
       '<button type="button" class="iconbtn" aria-label="Edit ' + esc(p.name) + '" data-act="editProduct" data-upc="' + esc(p.upc) + '">' + IC.pen + '</button></div></div>' +
-      '<div style="display:flex;align-items:center;gap:12px"><div class="grow" style="gap:4px"><div class="bar"><i style="width:' + pct(p) + '%;background:' + st.bar + '"></i></div><span class="t2">Minimum ' + p.par + ' · ' + esc(p.unit) + '</span></div>' +
+      '<div style="display:flex;align-items:center;gap:12px"><div class="grow" style="gap:4px"><div class="bar"><i style="width:' + pct(p) + '%;background:' + st.bar + '"></i></div><span class="t2">Minimum ' + p.par + ' · ' + esc(p.unit) + (casesText(p, q) ? ' · ≈ ' + esc(casesText(p, q)) : '') + '</span></div>' +
       '<button type="button" class="qbtn" aria-label="Subtract one" data-act="quick" data-upc="' + esc(p.upc) + '" data-n="-1"' + (q <= 0 ? ' disabled' : '') + '>' + IC.minus + '</button>' +
       '<span class="num" style="font-size:30px;min-width:44px;text-align:center">' + q + '</span>' +
       '<button type="button" class="qbtn plus" aria-label="Add one" data-act="quick" data-upc="' + esc(p.upc) + '" data-n="1">' + IC.plus + '</button></div></article>';
@@ -838,8 +917,72 @@ function productForm() {
     '<input class="inp num" style="font-size:22px" inputmode="numeric" data-bind="pform.qty" value="' + esc(f.qty) + '"></label>';
   if (editing) h += '<label class="f">Reason if the count changes<select class="inp" data-bind="pform.reason">' + REASONS.map(function (x) { return opt(x, f.reason); }).join('') + '</select></label>';
   h += '</div><button type="button" class="btn green wide" style="min-height:54px;font-size:16px" data-act="saveProduct"' + (S.busy ? ' disabled' : '') + '>Save changes</button>';
+  if (editing) h += packSection(f) + mergeSection(f);
   if (editing && isManager()) h += '<button type="button" class="btn danger wide' + (S.confirmDel ? ' armed' : '') + '" data-act="deleteProduct">' + (S.confirmDel ? 'Tap again to delete' : 'Delete product') + '</button>';
   return h + '</div>';
+}
+function packSection(f) {
+  var l = packsFor(f.oldUpc), np = f.np || { code: '', size: '', label: 'Case' };
+  var h = '<section class="card"><h2>Case / pack barcodes</h2><p class="t2" style="margin:0">Scanning one of these receives that many units of this product.</p>';
+  if (!l.length) h += '<p class="empty" style="margin:0">None linked yet.</p>';
+  l.forEach(function (k) {
+    h += '<div class="row"><div class="grow"><span class="t1">' + esc(k.label) + ' of ' + k.size + '</span><span class="t2 mono">' + esc(k.code) + '</span></div>' +
+      (isManager() ? '<button type="button" class="btn ghost sm" data-act="delPack" data-code="' + esc(k.code) + '">' + (S.confirmPack === k.code ? 'Tap to remove' : 'Remove') + '</button>' : '') + '</div>';
+  });
+  h += '<div class="subbox"><div style="font-size:13px;font-weight:700">Link another case / pack barcode</div>' +
+    '<input class="inp mono" inputmode="numeric" data-bind="pform.np.code" value="' + esc(np.code) + '" placeholder="Scan or type the case barcode" aria-label="Case barcode">' +
+    '<div class="grid2"><select class="inp" data-bind="pform.np.label" aria-label="Type"><option' + (np.label === 'Case' ? ' selected' : '') + '>Case</option><option' + (np.label === 'Pack' ? ' selected' : '') + '>Pack</option></select>' +
+    '<input class="inp" inputmode="numeric" data-bind="pform.np.size" value="' + esc(np.size) + '" placeholder="Units inside" aria-label="Units inside"></div>' +
+    '<button type="button" class="btn ghost" data-act="addPack"' + (S.busy ? ' disabled' : '') + '>Link barcode</button></div></section>';
+  return h;
+}
+function mergeSection(f) {
+  if (!isManager()) return '';
+  var m = f.merge || { q: '', upc: '', size: '', label: 'Case' }, target = m.upc ? S.products.get(m.upc) : null;
+  var h = '<section class="card"><h2>Is this product really a case?</h2><p class="t2" style="margin:0">If this was created from a case barcode by mistake, merge it into the single item. Its stock is converted to units and its barcode becomes a case barcode.</p>';
+  if (!f.mergeOpen) return h + '<button type="button" class="btn ghost" data-act="mergeOpen">Merge into a single item…</button></section>';
+  if (target) h += '<div class="row" style="border:0;padding:4px 0"><div class="grow"><span class="t1">' + esc(target.name) + '</span><span class="t2 mono">' + esc(target.upc) + '</span></div><button type="button" class="btn ghost sm" data-act="mergeClear">Change</button></div>';
+  else {
+    var q = m.q.trim().toLowerCase();
+    var l = q ? productList().filter(function (p) { return p.upc !== f.oldUpc && searchText(p).toLowerCase().indexOf(q) >= 0; }).slice(0, 6) : [];
+    h += '<input class="inp" id="mergeQ" data-bind="pform.merge.q" value="' + esc(m.q) + '" placeholder="Search the single item" autocomplete="off" aria-label="Single item to merge into"><div id="f-merge">' +
+      l.map(function (p) { return '<button type="button" class="pick" data-act="mergePick" data-upc="' + esc(p.upc) + '"><span class="t1" style="display:block">' + esc(p.name) + '</span><span class="t2 mono">' + esc(p.upc) + '</span></button>'; }).join('') + '</div>';
+  }
+  var cur = S.products.get(f.oldUpc), size = parseInt(digits(m.size), 10) || 0;
+  h += '<div class="grid2"><select class="inp" data-bind="pform.merge.label" aria-label="Type"><option' + (m.label === 'Case' ? ' selected' : '') + '>Case</option><option' + (m.label === 'Pack' ? ' selected' : '') + '>Pack</option></select>' +
+    '<input class="inp" inputmode="numeric" data-bind="pform.merge.size" value="' + esc(m.size) + '" placeholder="Units inside" aria-label="Units inside"></div>';
+  if (target && size > 1 && cur) h += '<div class="packnote">' + cur.qty + ' on hand here × ' + size + ' = ' + fmtNum(cur.qty * size) + ' units added to ' + esc(target.name) + '</div>';
+  h += '<button type="button" class="btn danger wide' + (S.confirmDel === 'merge' ? ' armed' : '') + '" data-act="doMerge"' + (S.busy ? ' disabled' : '') + '>' + (S.confirmDel === 'merge' ? 'Tap again to merge' : 'Merge') + '</button>';
+  return h + '</section>';
+}
+function addPack() {
+  var f = S.pform; if (!f || !f.oldUpc || S.busy) return;
+  var np = f.np || {}, code = digits(np.code), size = parseInt(digits(np.size), 10) || 0;
+  if (code.length < 6 || code.length > 14) { toast('Case barcodes must be 6 to 14 digits.', true); return; }
+  if (size < 2) { toast('Units inside must be 2 or more.', true); return; }
+  S.busy = true; refresh();
+  rpc('kf_save_pack', { p_code: code, p_upc: f.oldUpc, p_size: size, p_label: np.label || 'Case' })
+    .then(loadPacks).then(function () { toast((np.label || 'Case') + ' of ' + size + ' linked'); f.np = { code: '', size: '', label: 'Case' }; })
+    .catch(function (e) { toast(errMsg(e), true); }).then(function () { S.busy = false; refresh(); });
+}
+function delPack(code) {
+  if (S.confirmPack !== code) { S.confirmPack = code; refresh(); return; }
+  S.confirmPack = null;
+  rpc('kf_delete_pack', { p_code: code }).then(loadPacks).then(function () { toast('Case barcode removed'); })
+    .catch(function (e) { toast(errMsg(e), true); }).then(refresh);
+}
+function doMerge() {
+  var f = S.pform; if (!f || S.busy) return;
+  var m = f.merge || {}, size = parseInt(digits(m.size), 10) || 0;
+  if (!m.upc) { toast('Pick the single item to merge into.', true); return; }
+  if (size < 2) { toast('Units inside must be 2 or more.', true); return; }
+  if (S.confirmDel !== 'merge') { S.confirmDel = 'merge'; refresh(); return; }
+  S.busy = true; S.confirmDel = false; refresh();
+  var target = S.products.get(m.upc);
+  rpc('kf_merge_pack', { p_case_upc: f.oldUpc, p_base_upc: m.upc, p_size: size, p_label: m.label || 'Case' })
+    .then(function (r) { return Promise.all([loadProducts(), loadPacks()]).then(function () { return r; }); })
+    .then(function (r) { toast('Merged into ' + (target ? target.name : 'the single item') + (r && r.units_added ? ' · +' + fmtNum(r.units_added) + ' units' : '')); S.pform = null; })
+    .catch(function (e) { toast(errMsg(e), true); }).then(function () { S.busy = false; refresh(); });
 }
 function vendorsTab() {
   var h = '<div class="stack">';
@@ -1017,7 +1160,7 @@ function deliveryDetail() {
   h += '</section>';
   if (mv.length) {
     h += '<section class="card"><h2>Scan log</h2>' + mv.map(function (m) {
-      return '<div class="row"><div class="grow"><span class="t1">' + esc(m.name) + '</span><span class="t2">' + esc(m.user_name) + ' · ' + esc(new Date(m.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })) + (m.reason && m.reason !== 'Receiving' ? ' · ' + esc(m.reason) : '') + '</span></div><span class="num c-in" style="font-size:18px">+' + m.delta + '</span></div>';
+      return '<div class="row"><div class="grow"><span class="t1">' + esc(m.name) + '</span><span class="t2">' + esc(m.user_name) + ' · ' + esc(new Date(m.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })) + (m.pack_qty ? ' · ' + m.pack_qty + ' ' + esc(((S.packs.get(m.pack_code) || {}).label || 'case').toLowerCase()) + (m.pack_qty === 1 ? '' : 's') : '') + (m.reason && m.reason !== 'Receiving' ? ' · ' + esc(m.reason) : '') + '</span></div><span class="num c-in" style="font-size:18px">' + (m.delta > 0 ? '+' : '−') + Math.abs(m.delta) + '</span></div>';
     }).join('') + '</section><button type="button" class="btn ghost wide" data-act="exportOrder">Download this order (CSV)</button>';
   }
   return h + '</div>';
@@ -1052,9 +1195,9 @@ function go(screen, opts) {
 function lookup(raw) {
   var c = digits(raw);
   if (c.length < 6) { toast('That code is too short. Codes have at least 6 digits.', true); return; }
-  var p = findProduct(c);
-  S.code = c; S.qty = 1; S.newP = { name: '', dept: '', loc: '', unit: 'Each' };
-  S.scanned = p ? { upc: p.upc, code: c } : { upc: null, code: c };
+  var f = findCode(c);
+  S.code = c; S.qty = 1; S.newP = newPDefaults();
+  S.scanned = f ? { upc: f.product.upc, code: c, as: f.pack ? f.pack.code : 'unit', scannedPack: !!f.pack } : { upc: null, code: c };
   var ci = $('code'); if (ci) ci.value = c;
   fill('f-result', resultHtml());
   var r = $('f-result'); if (r && r.scrollIntoView) r.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1202,17 +1345,18 @@ function finishDelivery() {
 }
 function confirmMove() {
   var p = S.scanned && S.products.get(S.scanned.upc); if (!p || S.busy) return;
-  var out = S.mode === 'out', q = parseInt(S.qty, 10) || 0;
-  if (q < 1) { toast('Enter a quantity of at least 1.', true); return; }
+  var out = S.mode === 'out', cnt = parseInt(S.qty, 10) || 0;
+  var k = S.scanned.as && S.scanned.as !== 'unit' ? S.packs.get(S.scanned.as) : null, q = k ? cnt * k.size : cnt;
+  if (cnt < 1) { toast('Enter a quantity of at least 1.', true); return; }
   if (!out && !S.vendor) { toast('Select the vendor for this delivery first.', true); var v = $('vendor'); if (v) v.focus(); return; }
   if (out && q > shownQty(p)) { toast('Not enough stock: only ' + shownQty(p) + ' on hand.', true); return; }
   S.busy = true; fill('f-result', resultHtml());
   (out ? Promise.resolve(null) : ensureDelivery())
-    .then(function (did) { return rpc('kf_move', { p_upc: p.upc, p_delta: out ? -q : q, p_type: out ? 'out' : 'in', p_reason: out ? 'Pulled to floor' : 'Receiving', p_vendor: out ? '' : S.vendor, p_ref: out ? '' : S.ref, p_absolute: null, p_delivery: did }); })
+    .then(function (did) { return rpc('kf_move', { p_upc: p.upc, p_delta: out ? -q : q, p_type: out ? 'out' : 'in', p_reason: out ? 'Pulled to floor' : 'Receiving', p_vendor: out ? '' : S.vendor, p_ref: out ? '' : S.ref, p_absolute: null, p_delivery: did, p_pack_code: k ? k.code : null, p_pack_qty: k ? cnt : null }); })
     .then(function (res) {
       if (!afterMove(res)) return;
       p.qty = res.qty; S.products.set(p.upc, p);
-      toast((out ? 'Pulled −' : 'Received +') + q + ' · ' + p.name);
+      toast((out ? 'Pulled −' : 'Received +') + (k ? cnt + ' ' + k.label.toLowerCase() + (cnt === 1 ? '' : 's') + ' (' + q + ')' : q) + ' · ' + p.name);
       S.scanned = null; S.code = ''; S.qty = 1;
       var ci = $('code'); if (ci) { ci.value = ''; if (!('ontouchstart' in window)) ci.focus(); }
       return newestMoveIdFor(p.upc);
@@ -1220,8 +1364,41 @@ function confirmMove() {
     .catch(function (e) { toast(errMsg(e), true); })
     .then(function () { S.busy = false; refresh(); });
 }
+function createPackReceive(sc) {
+  var n = S.newP, size = parseInt(digits(n.packSize), 10) || 0, q = parseInt(S.qty, 10) || 0;
+  if (!S.vendor) { toast('Select the vendor for this delivery first.', true); return; }
+  if (size < 2) { toast('Enter how many units come inside (2 or more).', true); return; }
+  if (q < 1) { toast('Enter at least 1 ' + n.packLabel.toLowerCase() + '.', true); return; }
+  var base, unitCode;
+  if (n.link === 'existing') {
+    if (!n.linkUpc) { toast('Pick the single item that comes inside.', true); return; }
+    base = Promise.resolve(n.linkUpc);
+  } else {
+    if (!n.name.trim()) { toast('Enter the single-item name.', true); return; }
+    unitCode = digits(n.unitUpc);
+    if (unitCode && (unitCode.length < 6 || unitCode.length > 14)) { toast('Barcodes must be 6 to 14 digits, or leave it blank.', true); return; }
+    if (unitCode && unitCode === sc.code) { toast('The single item needs a different barcode than the case.', true); return; }
+    if (unitCode && findCode(unitCode)) { toast('That single-item barcode already exists. Choose "Existing product".', true); return; }
+    unitCode = unitCode || genCode();
+    base = rpc('kf_save_product', { p_old_upc: null, p_upc: unitCode, p_name: n.name.trim(), p_dept: n.dept || depts()[0], p_loc: n.loc, p_unit: 'Each', p_par: 0 }).then(function () { return unitCode; });
+  }
+  S.busy = true; fill('f-result', resultHtml());
+  var upcRef;
+  base.then(function (upc) { upcRef = upc; return rpc('kf_save_pack', { p_code: sc.code, p_upc: upc, p_size: size, p_label: n.packLabel }); })
+    .then(function () { return ensureDelivery(); })
+    .then(function (did) { return rpc('kf_move', { p_upc: upcRef, p_delta: q * size, p_type: 'in', p_reason: 'Receiving', p_vendor: S.vendor, p_ref: S.ref, p_absolute: null, p_delivery: did, p_pack_code: sc.code, p_pack_qty: q }); })
+    .then(function () { return Promise.all([loadProducts(), loadPacks(), newestMoveIdFor(upcRef)]); })
+    .then(function () {
+      var p = S.products.get(upcRef);
+      toast(n.packLabel + ' saved and received +' + q + ' (' + fmtNum(q * size) + ' units) · ' + (p ? p.name : ''));
+      S.scanned = null; S.code = ''; S.qty = 1; S.newP = newPDefaults(); var ci = $('code'); if (ci) ci.value = '';
+    })
+    .catch(function (e) { toast(errMsg(e), true); })
+    .then(function () { S.busy = false; refresh(); });
+}
 function createReceive() {
   var sc = S.scanned; if (!sc || S.busy) return;
+  if (!sc.manual && S.newP.kind === 'pack') { createPackReceive(sc); return; }
   var name = S.newP.name.trim(), q = parseInt(S.qty, 10) || 0;
   if (!name) { toast('Enter the product name.', true); return; }
   if (!S.vendor) { toast('Select the vendor for this delivery first.', true); return; }
@@ -1351,8 +1528,8 @@ function download(name, text) {
 }
 function stamp() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 function exportInv() {
-  var rows = [['upc', 'name', 'department', 'location', 'unit', 'quantity', 'minimum', 'status']];
-  productList().forEach(function (p) { rows.push([p.upc, p.name, p.dept, p.loc, p.unit, p.qty, p.par, status(p).label]); });
+  var rows = [['upc', 'name', 'department', 'location', 'unit', 'quantity', 'minimum', 'status', 'case_barcodes']];
+  productList().forEach(function (p) { rows.push([p.upc, p.name, p.dept, p.loc, p.unit, p.qty, p.par, status(p).label, packsFor(p.upc).map(function (k) { return k.code + ' (' + k.label + ' ' + k.size + ')'; }).join('; ')]); });
   download('inventory-' + stamp() + '.csv', rows.map(function (r) { return r.map(csvCell).join(','); }).join('\n'));
 }
 function exportLog() {
@@ -1391,13 +1568,14 @@ function importCsv(file) {
     var head = rows[0].map(function (h) { return h.trim().toLowerCase(); });
     function col(names) { for (var i = 0; i < names.length; i++) { var k = head.indexOf(names[i]); if (k >= 0) return k; } return -1; }
     var ix = { upc: col(['upc', 'code', 'barcode', 'ean', 'codigo']), name: col(['name', 'product', 'description', 'nombre']), dept: col(['department', 'dept', 'departamento']),
-      loc: col(['location', 'loc', 'ubicacion']), unit: col(['unit', 'unidad']), qty: col(['quantity', 'qty', 'cantidad']), par: col(['minimum', 'min', 'par', 'minimo']) };
+      loc: col(['location', 'loc', 'ubicacion']), unit: col(['unit', 'unidad']), qty: col(['quantity', 'qty', 'cantidad']), par: col(['minimum', 'min', 'par', 'minimo']),
+      caseCode: col(['case_upc', 'case_barcode', 'case_code']), caseSize: col(['case_size', 'case_qty', 'units_per_case']) };
     if (ix.upc < 0 || ix.name < 0) { toast('The CSV needs at least "upc" and "name" columns.', true); return; }
     var data = rows.slice(1), done = 0, created = 0, updated = 0, failed = 0;
     function val(r, k) { return k >= 0 ? String(r[k] || '').trim() : ''; }
     function next(i) {
       if (i >= data.length) {
-        loadProducts().then(function () { refresh(); toast('Import finished · ' + created + ' new, ' + updated + ' updated' + (failed ? ', ' + failed + ' skipped' : ''), failed > 0); });
+        Promise.all([loadProducts(), loadPacks()]).then(function () { refresh(); toast('Import finished · ' + created + ' new, ' + updated + ' updated' + (failed ? ', ' + failed + ' skipped' : ''), failed > 0); });
         return;
       }
       var r = data[i], upc = digits(val(r, ix.upc)), exists = S.products.has(upc);
@@ -1407,6 +1585,9 @@ function importCsv(file) {
       rpc('kf_save_product', { p_old_upc: exists ? upc : null, p_upc: upc, p_name: val(r, ix.name), p_dept: dept, p_loc: val(r, ix.loc), p_unit: unit, p_par: par })
         .then(function () {
           if (exists) updated++; else created++;
+          var cc = digits(val(r, ix.caseCode)), cs = parseInt(val(r, ix.caseSize), 10) || 0;
+          if (cc && cs > 1) return rpc('kf_save_pack', { p_code: cc, p_upc: upc, p_size: cs, p_label: 'Case' }).catch(function () { failed++; })
+            .then(function () { if (!exists && qty > 0) return rpc('kf_move', { p_upc: upc, p_delta: 0, p_type: 'adj', p_reason: 'CSV import', p_vendor: '', p_ref: '', p_absolute: qty, p_delivery: null }); });
           if (!exists && qty > 0) return rpc('kf_move', { p_upc: upc, p_delta: 0, p_type: 'adj', p_reason: 'CSV import', p_vendor: '', p_ref: '', p_absolute: qty, p_delivery: null });
         })
         .catch(function () { failed++; })
@@ -1463,7 +1644,7 @@ document.addEventListener('click', function (e) {
     case 'mode': S.mode = d.mode; refresh(); break;
     case 'cam': if (cam) stopCam(); else startCam(); break;
     case 'lookup': lookup(($('code') || {}).value); break;
-    case 'qty': S.qty = Math.max(1, (parseInt(S.qty, 10) || 0) + parseInt(d.n, 10)); var qi = $('qtyin'); if (qi) qi.value = S.qty; fill('f-result', resultHtml()); break;
+    case 'qty': S.qty = Math.max(1, (parseInt(S.qty, 10) || 0) + parseInt(d.n, 10)); var rr = $('f-result'); if (rr) rr.innerHTML = resultHtml(); break;
     case 'cancelScan': S.scanned = null; S.code = ''; S.qty = 1; var ci = $('code'); if (ci) ci.value = ''; refresh(); break;
     case 'confirm': confirmMove(); break;
     case 'createReceive': createReceive(); break;
@@ -1500,10 +1681,21 @@ document.addEventListener('click', function (e) {
     case 'shotTorch': toggleTorch(); break;
     case 'exportOrder': exportOrder(); break;
     case 'resumeOrder': resumeOrder(); break;
+    case 'recvAs': if (S.scanned) { S.scanned.as = d.v; S.qty = 1; fill('f-result', resultHtml()); } break;
+    case 'newKind': S.newP.kind = d.v; S.qty = 1; fill('f-result', resultHtml()); break;
+    case 'newLink': S.newP.link = d.v; S.newP.linkUpc = ''; fill('f-result', resultHtml()); break;
+    case 'linkPick': S.newP.linkUpc = d.upc; fill('f-result', resultHtml()); break;
+    case 'linkClear': S.newP.linkUpc = ''; S.newP.linkQ = ''; fill('f-result', resultHtml()); break;
+    case 'addPack': addPack(); break;
+    case 'delPack': delPack(d.code); break;
+    case 'mergeOpen': if (S.pform) { S.pform.mergeOpen = true; S.pform.merge = { q: '', upc: '', size: '', label: 'Case' }; refresh(); } break;
+    case 'mergePick': if (S.pform && S.pform.merge) { S.pform.merge.upc = d.upc; refresh(); } break;
+    case 'mergeClear': if (S.pform && S.pform.merge) { S.pform.merge.upc = ''; S.confirmDel = false; refresh(); } break;
+    case 'doMerge': doMerge(); break;
     case 'focusScan': S.manual = false; refresh(); var fz = $('finder'); if (fz && fz.scrollIntoView) fz.scrollIntoView({ behavior: 'smooth', block: 'start' }); var cz = $('code'); if (cz) cz.focus(); break;
     case 'manualToggle': S.manual = !S.manual; S.manualQ = ''; refresh(); if (S.manual) { var mq = $('manualQ'); if (mq) mq.focus(); } break;
-    case 'manualPick': S.scanned = { upc: d.upc, code: d.upc }; S.qty = 1; S.manual = false; refresh(); var rz = $('f-result'); if (rz && rz.scrollIntoView) rz.scrollIntoView({ behavior: 'smooth', block: 'center' }); break;
-    case 'manualNew': S.scanned = { upc: null, code: '', manual: true }; S.qty = 1; S.newP = { name: S.manualQ.trim(), dept: '', loc: '', unit: 'Each', upc: '' }; S.manual = false; refresh(); var rn = $('f-result'); if (rn && rn.scrollIntoView) rn.scrollIntoView({ behavior: 'smooth', block: 'center' }); break;
+    case 'manualPick': S.scanned = { upc: d.upc, code: d.upc, as: 'unit' }; S.qty = 1; S.manual = false; refresh(); var rz = $('f-result'); if (rz && rz.scrollIntoView) rz.scrollIntoView({ behavior: 'smooth', block: 'center' }); break;
+    case 'manualNew': S.scanned = { upc: null, code: '', manual: true }; S.qty = 1; S.newP = newPDefaults(); S.newP.name = S.manualQ.trim(); S.manual = false; refresh(); var rn = $('f-result'); if (rn && rn.scrollIntoView) rn.scrollIntoView({ behavior: 'smooth', block: 'center' }); break;
     case 'fixLine': var gx = orderGroups().filter(function (x) { return x.upc === d.upc; })[0]; S.fix = { upc: d.upc, val: String(gx ? gx.units : 0) }; refresh(); break;
     case 'saveFix': saveFix(); break;
     case 'cancelFix': S.fix = null; refresh(); break;
@@ -1530,6 +1722,10 @@ document.addEventListener('click', function (e) {
 function setPath(path, value) {
   var parts = path.split('.');
   if (parts.length === 1) { S[path] = value; return; }
+  if (parts.length === 3) {
+    var o = S[parts[0]]; if (!o) return;
+    o[parts[1]] = o[parts[1]] || {}; o[parts[1]][parts[2]] = value; return;
+  }
   if (S[parts[0]]) S[parts[0]][parts[1]] = value;
 }
 document.addEventListener('input', function (e) {
@@ -1538,6 +1734,10 @@ document.addEventListener('input', function (e) {
   if (k === 'search') { fill('f-stocksum', stockSum()); var st = $('f-stock'); if (st) st.innerHTML = stockHtml(); }
   if (k === 'adminQ') { var q = S.adminQ.trim().toLowerCase(); var al = $('f-adminlist'); if (al) al.innerHTML = adminRows(productList().filter(function (p) { return !q || (p.name + ' ' + p.upc).toLowerCase().indexOf(q) >= 0; })); }
   if (k === 'qty') { var n = parseInt(digits(el.value), 10); S.qty = isNaN(n) ? '' : n; }
+  if (k === 'newP.linkQ') { var lr = $('f-link'); if (lr) lr.innerHTML = linkResults(); }
+  if (k === 'newP.packSize') { var tot = document.querySelector('#f-result .total'); var sz = parseInt(digits(el.value), 10) || 0, qq = parseInt(S.qty, 10) || 0; if (tot) tot.innerHTML = sz > 1 ? qq + ' × ' + sz + ' = <b>' + fmtNum(qq * sz) + '</b> units' : 'Enter the units inside to see the total.'; }
+  if (k === 'pform.merge.q') { var mq = S.pform && S.pform.merge ? S.pform.merge.q.trim().toLowerCase() : ''; var mr2 = $('f-merge'); if (mr2) mr2.innerHTML = mq ? productList().filter(function (p) { return p.upc !== S.pform.oldUpc && searchText(p).toLowerCase().indexOf(mq) >= 0; }).slice(0, 6).map(function (p) { return '<button type="button" class="pick" data-act="mergePick" data-upc="' + esc(p.upc) + '"><span class="t1" style="display:block">' + esc(p.name) + '</span><span class="t2 mono">' + esc(p.upc) + '</span></button>'; }).join('') : ''; }
+  if (k === 'qty' && S.scanned) { var tq = document.querySelector('#f-result .total'); if (tq) { var n2 = parseInt(digits(el.value), 10) || 0, k2 = S.scanned.as && S.scanned.as !== 'unit' ? S.packs.get(S.scanned.as) : null, sz2 = k2 ? k2.size : parseInt(digits(S.newP.packSize), 10) || 0; if (sz2 > 1) tq.innerHTML = (k2 ? 'Total: ' : n2 + ' × ' + sz2 + ' = ') + '<b>' + fmtNum(n2 * sz2) + '</b> units'; } }
   if (k === 'manualQ') { var mr = $('f-manual'); if (mr) mr.innerHTML = manualResults(); }
   if (k === 'ordersQ') { var of = $('f-orders'); if (of) of.innerHTML = ordersHtml(); }
 });
@@ -1548,7 +1748,7 @@ document.addEventListener('change', function (e) {
   var k = el.getAttribute && el.getAttribute('data-bind'); if (!k) return;
   setPath(k, el.value);
   if (k === 'vendor') { el.className = 'inp ' + (S.vendor ? 'set' : 'need'); el.blur(); fill('f-vendor', vendorHtml()); if (S.delivery && S.delivery.vendor !== S.vendor) { S.orderMoves = []; S.fix = null; } fill('f-order', orderHtml()); }
-  if (k === 'newP.unit') { el.blur(); fill('f-result', resultHtml()); }
+  if (k === 'newP.unit' || k === 'newP.packLabel') { el.blur(); fill('f-result', resultHtml()); }
   if (k === 'qty') { if (!S.qty || S.qty < 1) S.qty = 1; el.value = S.qty; }
 });
 document.addEventListener('keydown', function (e) {
