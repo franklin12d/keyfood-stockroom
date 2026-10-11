@@ -1,0 +1,1105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12201A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Stockroom">
+<title>Stockroom · Key Food</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+:root{
+  --bg:#EEF1EF; --card:#FFFFFF; --ink:#12201A; --muted:#4A5852; --line:#D5DCD8; --field:#B7C2BC; --soft:#F4F6F5; --track:#DCE2DF;
+  --green:#0E6B47; --green-ink:#0B5A3B; --green-soft:#DCEFE5;
+  --orange:#B4400B; --orange-ink:#9A3509; --orange-soft:#FBE3D6;
+  --amber:#C26A00; --amber-ink:#7A4300; --amber-soft:#FCE9C8; --amber-line:#F0D4A3;
+  --red:#B42318; --red-ink:#8E1B1B; --red-soft:#FADBD8;
+  --blue-ink:#2B3F8C; --blue-soft:#E1E6F5;
+  --head:#12201A; --head-muted:#B9C7C0;
+  --display:'Barlow Condensed','Arial Narrow',sans-serif;
+  --body:'Barlow','Helvetica Neue',Helvetica,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  box-sizing:border-box;
+}
+*,*::before,*::after{box-sizing:inherit}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+button:disabled{opacity:.45;cursor:not-allowed}
+:focus-visible{outline:3px solid #2F7DE1;outline-offset:2px}
+h1{margin:0;font-family:var(--display);font-size:28px;font-weight:700;line-height:1.1}
+h2{margin:0;font-size:16px;font-weight:700}
+.sub{margin:2px 0 0;font-size:13px;color:var(--muted)}
+.sr{position:absolute;left:-9999px}
+
+/* shell */
+#app{max-width:560px;margin:0 auto;min-height:100%;display:flex;flex-direction:column}
+.top{position:sticky;top:0;z-index:5;background:var(--head);color:#fff;padding:calc(env(safe-area-inset-top,0px) + 12px) 16px 12px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand b{display:block;font-family:var(--display);font-size:24px;letter-spacing:.04em;line-height:1}
+.brand span{font-size:12px;color:var(--head-muted)}
+.who{display:flex;align-items:center;gap:8px;background:#23342C;border:1px solid #3B4F45;border-radius:999px;padding:4px 4px 4px 12px;min-height:40px}
+.who span{font-size:13px;font-weight:600;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.who button{border:0;border-radius:999px;background:#3B4F45;color:#fff;font-size:12px;font-weight:700;padding:0 10px;min-height:32px}
+.banner{background:var(--amber-soft);color:var(--amber-ink);font-size:13px;font-weight:600;padding:8px 16px;border-bottom:1px solid var(--amber-line)}
+main{flex:1;padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
+.stack{display:flex;flex-direction:column;gap:14px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--card);border-top:1px solid var(--line);padding:4px 6px calc(8px + env(safe-area-inset-bottom,0px))}
+nav.tabs .in{max-width:560px;margin:0 auto;display:flex;align-items:flex-end}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:0;min-height:56px;font-size:11px;font-weight:700;color:var(--muted)}
+.tab.on{color:var(--green)}
+.tab .fab{width:58px;height:58px;margin-top:-24px;border-radius:999px;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;border:4px solid var(--bg)}
+
+/* cards & rows */
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.cardh{display:flex;justify-content:space-between;align-items:center}
+.link{min-height:36px;background:none;border:0;color:var(--green);font-weight:700;font-size:14px;padding:0}
+.list{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #E6EBE8}
+.row:last-child{border-bottom:0}
+.card .row{padding:8px 0;border-bottom:0;border-top:1px solid #E6EBE8}
+.grow{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.t1{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t2{font-size:12px;color:var(--muted)}
+.t2b{font-size:12px;color:var(--ink);font-weight:600}
+.empty{font-size:14px;color:var(--muted);padding:6px 0}
+.num{font-family:var(--display);font-weight:700}
+.mono{font-family:var(--mono)}
+.pill{padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}
+.tag{width:68px;flex:none;text-align:center;padding:3px 0;border-radius:6px;font-size:11px;font-weight:700}
+.ok{background:var(--green-soft);color:var(--green-ink)}
+.low{background:var(--amber-soft);color:var(--amber-ink)}
+.outs{background:var(--red-soft);color:var(--red-ink)}
+.t-in{background:var(--green-soft);color:var(--green-ink)}
+.t-out{background:var(--orange-soft);color:var(--orange-ink)}
+.t-adj{background:var(--blue-soft);color:var(--blue-ink)}
+.c-in{color:var(--green-ink)}.c-out{color:var(--orange-ink)}.c-adj{color:var(--blue-ink)}
+
+/* kpis */
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.kpi span{font-size:12px;color:var(--muted);font-weight:600}
+.kpi b{font-family:var(--display);font-size:34px;line-height:1.05}
+.kpi.warn{background:#FFF6E6;border-color:var(--amber-line)}.kpi.warn span,.kpi.warn b{color:var(--amber-ink)}
+.kpi.good{background:#E6F3EC;border-color:#B9DCC8}.kpi.good span,.kpi.good b{color:var(--green-ink)}
+
+/* buttons & fields */
+.big{min-height:64px;border:0;border-radius:14px;color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px}
+.big.in{background:var(--green)}.big.out{background:var(--orange)}
+.btn{min-height:50px;border-radius:12px;border:0;background:var(--ink);color:#fff;font-weight:700;font-size:15px;padding:0 16px}
+.btn.green{background:var(--green)}.btn.orange{background:var(--orange)}
+.btn.ghost{background:var(--card);color:var(--ink);border:1px solid var(--field)}
+.btn.danger{background:var(--card);color:var(--red);border:1px solid var(--red)}
+.btn.danger.armed{background:var(--red);color:#fff}
+.btn.sm{min-height:40px;font-size:13px;padding:0 12px;border-radius:10px}
+.btn.wide{width:100%}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--muted)}
+.inp{min-height:46px;border:1px solid var(--field);border-radius:10px;padding:0 12px;font-size:16px;background:var(--card);color:var(--ink);width:100%}
+select.inp{padding:0 8px}
+textarea.inp{padding:10px 12px;min-height:150px;resize:vertical;line-height:1.4}
+.seg{display:grid;grid-template-columns:repeat(var(--n,2),minmax(0,1fr));gap:4px;background:var(--track);padding:4px;border-radius:12px}
+.seg button{min-height:44px;border:0;border-radius:9px;background:transparent;font-size:15px;font-weight:700}
+.seg button.on-in{background:var(--green);color:#fff}
+.seg button.on-out{background:var(--orange);color:#fff}
+.seg button.on{background:var(--card);color:var(--green-ink)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;min-height:38px;padding:0 14px;border-radius:999px;border:1px solid var(--field);background:var(--card);font-size:14px;font-weight:600}
+.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+/* scan */
+.vendorbox{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.vendorbox select{border-width:2px;font-weight:600}
+.vendorbox select.need{border-color:var(--amber)}
+.vendorbox select.set{border-color:var(--green)}
+.finder{position:relative;height:210px;border-radius:16px;background:#0B1410;overflow:hidden}
+#reader{position:absolute;inset:0}
+#reader video{width:100%!important;height:100%!important;object-fit:cover}
+#reader img,#reader__dashboard,#reader__header_message{display:none!important}
+.corner{position:absolute;width:30px;height:30px;border:4px solid #fff;z-index:2}
+.c1{left:24px;top:22px;border-right:0;border-bottom:0;border-radius:6px 0 0 0}
+.c2{right:24px;top:22px;border-left:0;border-bottom:0;border-radius:0 6px 0 0}
+.c3{left:24px;bottom:22px;border-right:0;border-top:0;border-radius:0 0 0 6px}
+.c4{right:24px;bottom:22px;border-left:0;border-top:0;border-radius:0 0 6px 0}
+.sweep{position:absolute;left:36px;right:36px;height:2px;background:#FF7A3D;box-shadow:0 0 12px #FF7A3D;z-index:2;animation:sweep 2.4s ease-in-out infinite;display:none}
+.finder.live .sweep{display:block}
+@keyframes sweep{0%{top:20%}50%{top:78%}100%{top:20%}}
+@media (prefers-reduced-motion:reduce){.sweep{animation:none;top:50%}}
+.finder-ui{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#C9D6CF;font-size:13px;text-align:center;padding:0 40px}
+.finder.live .finder-ui{inset:auto 0 12px 0}
+.finder.live .finder-ui p{display:none}
+.camBtn{min-height:44px;padding:0 18px;border-radius:999px;border:1px solid #fff;background:rgba(255,255,255,.12);color:#fff;font-weight:700;font-size:14px}
+.inrow{display:flex;gap:8px}
+.inrow .inp{flex:1;min-width:0;font-family:var(--mono)}
+.result{background:var(--card);border:2px solid var(--green);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.result.out{border-color:var(--orange)}
+.result.new{border:2px dashed var(--orange)}
+.kicker{font-size:12px;font-weight:700;letter-spacing:.03em}
+.stepper{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sbtn{width:56px;height:56px;border-radius:14px;border:1px solid var(--field);background:var(--soft);display:flex;align-items:center;justify-content:center}
+.sbtn.plus{border:0;background:var(--green);color:#fff}
+.result.out .sbtn.plus{background:var(--orange)}
+.qtyin{width:110px;text-align:center;border:0;border-bottom:2px solid var(--line);background:transparent;font-family:var(--display);font-size:48px;font-weight:700;padding:0}
+
+/* stock items */
+.item{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.itemh{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.bar{height:8px;border-radius:999px;background:#E3E8E5;overflow:hidden}
+.bar i{display:block;height:8px;border-radius:999px}
+.qbtn{width:44px;height:44px;flex:none;border-radius:12px;border:1px solid var(--field);background:var(--card);color:var(--orange);display:flex;align-items:center;justify-content:center}
+.qbtn.plus{border:0;background:var(--green);color:#fff}
+.iconbtn{width:36px;height:36px;border-radius:8px;border:0;background:var(--soft);color:var(--muted);display:flex;align-items:center;justify-content:center}
+.avatar{width:36px;height:36px;flex:none;border-radius:999px;background:#E6F3EC;color:var(--green-ink);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+.countbox{background:#FFF6E6;border:1px solid var(--amber-line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.countbox label.f{color:var(--amber-ink)}
+
+/* login */
+.login{min-height:100vh;display:flex;flex-direction:column;background:var(--head);color:#fff;padding:calc(env(safe-area-inset-top,0px) + 28px) 20px calc(env(safe-area-inset-bottom,0px) + 24px)}
+.login .brand b{font-size:40px}
+.login h2{font-size:20px;margin:28px 0 12px;color:#fff}
+.people{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.person{min-height:72px;border-radius:14px;border:1px solid #3B4F45;background:#1B2B23;color:#fff;text-align:left;padding:10px 14px;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.person b{font-size:16px}
+.person span{font-size:12px;color:var(--head-muted)}
+.dots{display:flex;gap:14px;justify-content:center;margin:18px 0}
+.dots i{width:16px;height:16px;border-radius:999px;border:2px solid #B9C7C0}
+.dots i.f{background:#fff;border-color:#fff}
+.pad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;max-width:320px;margin:0 auto;width:100%}
+.pad button{min-height:64px;border-radius:14px;border:0;background:#23342C;color:#fff;font-family:var(--display);font-size:28px;font-weight:700}
+.pad button.txt{font-family:var(--body);font-size:14px;background:transparent}
+.loginmsg{text-align:center;min-height:20px;font-size:14px;color:#FFB59A;font-weight:600}
+
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));width:min(528px,calc(100% - 32px));background:var(--ink);color:#fff;border-radius:12px;padding:12px 14px;font-size:14px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:20;display:none}
+#toast.show{display:block}
+#toast.bad{background:var(--red)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<input type="file" id="csvFile" accept=".csv,text/csv" class="sr" aria-label="CSV file to import">
+<script>
+(function () {
+'use strict';
+
+/* ---------- connection ---------- */
+var SB_URL = 'https://rddeawzaoetvwzxfidby.supabase.co';
+var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkZGVhd3phb2V0dnd6eGZpZGJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3MjQxMjMsImV4cCI6MjEwNzMwMDEyM30.4eWC_dBV_d0vabTntxcUxU94WwoQecChW6t-2TzYtyk';
+var sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: false } });
+
+var DEFAULT_DEPTS = ['Grocery', 'Beverages', 'Dairy', 'Frozen', 'Meat', 'Produce', 'Bakery', 'Household', 'Health & beauty', 'Other'];
+var UNITS = ['Each', 'Case', 'Pack'];
+var ROLES = ['Receiver', 'Stock associate', 'Department lead', 'Manager'];
+var REASONS = ['Physical count', 'Damaged', 'Expired', 'Receiving error', 'Return to vendor'];
+
+var S = {
+  token: null, me: null, users: [], loginUser: null, pin: '', loginMsg: '',
+  screen: 'home', mode: 'in', vendor: '', ref: '', code: '',
+  products: new Map(), moves: [], movesEnd: false, todayIn: 0,
+  vendors: [], settings: { store: 'Key Food · Store [#]', depts: DEFAULT_DEPTS.slice() },
+  scanned: null, qty: 1, newP: { name: '', dept: '', loc: '', unit: 'Each' },
+  search: '', dept: 'All', adminQ: '', panelTab: 'products',
+  pform: null, vform: null, uform: null, setForm: null, confirmDel: false,
+  logFilter: 'all', session: [], busy: false, pending: {}, live: false
+};
+
+/* ---------- helpers ---------- */
+function $(id) { return document.getElementById(id); }
+function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function digits(v) { return String(v || '').replace(/\D/g, ''); }
+function fmtNum(n) { return Number(n || 0).toLocaleString('en-US'); }
+function fmtWhen(ts) { return new Date(ts).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); }
+function startOfDay() { var d = new Date(); d.setHours(0, 0, 0, 0); return d; }
+function isManager() { return S.me && S.me.role === 'Manager'; }
+function initials(n) { return String(n).split(' ').filter(Boolean).map(function (w) { return w.charAt(0); }).join('').slice(0, 2).toUpperCase(); }
+function opt(v, cur, label) { return '<option value="' + esc(v) + '"' + (v === cur ? ' selected' : '') + '>' + esc(label == null ? v : label) + '</option>'; }
+function depts() { return (S.settings.depts && S.settings.depts.length) ? S.settings.depts : DEFAULT_DEPTS; }
+
+var toastT;
+function toast(msg, bad) {
+  var t = $('toast'); t.textContent = msg; t.className = 'show' + (bad ? ' bad' : '');
+  clearTimeout(toastT); toastT = setTimeout(function () { t.className = ''; }, bad ? 4200 : 2600);
+}
+
+var ERR = {
+  SESSION_EXPIRED: 'Your session ended. Sign in again.',
+  MANAGER_ONLY: 'Only a manager can do that.',
+  VENDOR_REQUIRED: 'Select the vendor for this delivery first.',
+  PRODUCT_NOT_FOUND: 'That product no longer exists.',
+  DUPLICATE_UPC: 'That code already belongs to another product.',
+  BAD_UPC: 'Codes must be 6 to 14 digits.',
+  NAME_REQUIRED: 'Enter a name.',
+  DUPLICATE_NAME: 'That name is already in use.',
+  PIN_REQUIRED: 'New users need a 4-digit PIN.',
+  BAD_PIN_FORMAT: 'PIN must be exactly 4 digits.',
+  CANNOT_DEMOTE_SELF: "You can't remove your own manager role.",
+  CANNOT_DELETE_SELF: "You can't remove yourself.",
+  LOCKED: 'Too many wrong PINs. Wait 5 minutes and try again.',
+  USER_NOT_FOUND: 'That user no longer exists.'
+};
+function errMsg(e) {
+  var m = (e && (e.message || e.details)) || String(e);
+  for (var k in ERR) { if (m.indexOf(k) >= 0) return ERR[k]; }
+  if (m.indexOf('Failed to fetch') >= 0 || m.indexOf('NetworkError') >= 0) return 'No connection. Check Wi-Fi and try again.';
+  return 'Could not save: ' + m;
+}
+
+function rpc(fn, args) {
+  args = args || {};
+  if (S.token) args.p_token = S.token;
+  return sb.rpc(fn, args).then(function (r) {
+    if (r.error) {
+      if (String(r.error.message).indexOf('SESSION_EXPIRED') >= 0) { signOut(true); }
+      throw r.error;
+    }
+    return r.data;
+  });
+}
+
+/* ---------- data loading ---------- */
+function loadUsers() {
+  return sb.from('kf_users').select('id,name,role,active').eq('active', true).order('name').then(function (r) {
+    if (r.error) throw r.error; S.users = r.data || [];
+  });
+}
+function loadVendors() {
+  return sb.from('kf_vendors').select('*').order('name').then(function (r) {
+    if (r.error) throw r.error; S.vendors = r.data || [];
+    if (S.vendor && !S.vendors.some(function (v) { return v.name === S.vendor; })) S.vendor = '';
+  });
+}
+function loadSettings() {
+  return sb.from('kf_settings').select('*').then(function (r) {
+    if (r.error) throw r.error;
+    (r.data || []).forEach(function (row) { S.settings[row.key] = row.value; });
+  });
+}
+function loadProducts() {
+  var all = [], size = 1000;
+  function page(from) {
+    return sb.from('kf_products').select('*').order('name').range(from, from + size - 1).then(function (r) {
+      if (r.error) throw r.error;
+      all = all.concat(r.data || []);
+      if ((r.data || []).length === size) return page(from + size);
+    });
+  }
+  return page(0).then(function () {
+    var m = new Map(); all.forEach(function (p) { m.set(p.upc, p); }); S.products = m;
+  });
+}
+function loadMoves(more) {
+  var from = more ? S.moves.length : 0;
+  return sb.from('kf_moves').select('*').order('at', { ascending: false }).range(from, from + 199).then(function (r) {
+    if (r.error) throw r.error;
+    S.moves = more ? S.moves.concat(r.data || []) : (r.data || []);
+    S.movesEnd = (r.data || []).length < 200;
+  });
+}
+function loadToday() {
+  return sb.from('kf_moves').select('delta').eq('type', 'in').gte('at', startOfDay().toISOString()).limit(5000).then(function (r) {
+    if (r.error) throw r.error;
+    S.todayIn = (r.data || []).reduce(function (a, x) { return a + x.delta; }, 0);
+  });
+}
+function loadAll() {
+  return Promise.all([loadUsers(), loadVendors(), loadSettings(), loadProducts(), loadMoves(false), loadToday()]);
+}
+
+var channel = null;
+function subscribe() {
+  if (channel) return;
+  channel = sb.channel('kf-live')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'kf_products' }, function (p) {
+      if (p.eventType === 'DELETE') { if (p.old && p.old.upc) S.products.delete(p.old.upc); }
+      else if (p.new && p.new.upc) { S.products.set(p.new.upc, p.new); }
+      soon();
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kf_moves' }, function (p) {
+      var m = p.new; if (!m) return;
+      if (!S.moves.some(function (x) { return x.id === m.id; })) S.moves.unshift(m);
+      if (m.type === 'in' && new Date(m.at) >= startOfDay()) S.todayIn += m.delta;
+      soon();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'kf_vendors' }, function () { loadVendors().then(soon); })
+    .subscribe(function (status) { S.live = status === 'SUBSCRIBED'; soon(); });
+}
+// safety net: full refresh every 2 minutes and when the app comes back to the foreground
+setInterval(function () { if (S.me && !document.hidden) Promise.all([loadProducts(), loadVendors()]).then(soon).catch(function () {}); }, 120000);
+document.addEventListener('visibilitychange', function () {
+  if (!document.hidden && S.me) loadAll().then(soon).catch(function () {});
+});
+window.addEventListener('online', function () { soon(); if (S.me) loadAll().then(soon).catch(function () {}); });
+window.addEventListener('offline', soon);
+
+/* ---------- session ---------- */
+function signOut(expired) {
+  var t = S.token;
+  S.token = null; S.me = null; S.loginUser = null; S.pin = '';
+  S.loginMsg = expired ? 'Session ended. Sign in again.' : '';
+  try { localStorage.removeItem('kf_token'); } catch (e) {}
+  stopCam();
+  if (t && !expired) sb.rpc('kf_logout', { p_token: t });
+  loadUsers().then(renderAll, renderAll);
+}
+function tryPin() {
+  var u = S.loginUser; if (!u || S.pin.length !== 4) return;
+  S.busy = true; renderAll();
+  sb.rpc('kf_login', { p_user_id: u.id, p_pin: S.pin }).then(function (r) {
+    S.busy = false;
+    if (r.error) { S.pin = ''; S.loginMsg = errMsg(r.error); renderAll(); return; }
+    if (!r.data || !r.data.ok) { S.pin = ''; S.loginMsg = 'Wrong PIN. Try again.'; renderAll(); return; }
+    S.token = r.data.token; S.me = { id: r.data.id, name: r.data.name, role: r.data.role };
+    try { localStorage.setItem('kf_token', S.token); } catch (e) {}
+    S.pin = ''; S.loginMsg = ''; S.screen = 'home'; S.session = [];
+    renderAll();
+    loadAll().then(function () { subscribe(); renderAll(); }).catch(function (e) { toast(errMsg(e), true); });
+  });
+}
+
+/* ---------- icons ---------- */
+var IC = {
+  home: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>',
+  box: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>',
+  scan: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 7V4h3"/><path d="M21 7V4h-3"/><path d="M3 17v3h3"/><path d="M21 17v3h-3"/><path d="M7 8v8"/><path d="M10 8v8"/><path d="M13 8v8"/><path d="M17 8v8"/></svg>',
+  panel: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h10"/><path d="M18 6h2"/><circle cx="16" cy="6" r="2"/><path d="M4 12h2"/><path d="M10 12h10"/><circle cx="8" cy="12" r="2"/><path d="M4 18h10"/><path d="M18 18h2"/><circle cx="16" cy="18" r="2"/></svg>',
+  clock: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  down: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>',
+  up: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9"/><path d="M7 14l5-5 5 5"/><path d="M4 3h16"/></svg>',
+  plus: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>',
+  minus: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>',
+  pen: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>'
+};
+
+/* ---------- product status ---------- */
+function shownQty(p) { return p.qty + (S.pending[p.upc] || 0); }
+function status(p) {
+  var q = shownQty(p);
+  if (q <= 0) return { label: 'Out', cls: 'outs', bar: 'var(--red)', rank: 0 };
+  if (p.par > 0 && q < p.par) return { label: 'Low', cls: 'low', bar: 'var(--amber)', rank: 1 };
+  return { label: 'OK', cls: 'ok', bar: 'var(--green)', rank: 2 };
+}
+function pct(p) { var q = shownQty(p); if (q <= 0) return 0; if (!p.par) return 100; return Math.min(100, Math.max(6, Math.round(q / (p.par * 2) * 100))); }
+function productList() { return Array.from(S.products.values()).sort(function (a, b) { return a.name.localeCompare(b.name); }); }
+function lowList() { return productList().filter(function (p) { return status(p).rank < 2; }).sort(function (a, b) { return status(a).rank - status(b).rank || (shownQty(a) / (a.par || 1)) - (shownQty(b) / (b.par || 1)); }); }
+
+/* ---------- move rows ---------- */
+function moveRow(m) {
+  var t = { in: ['Received', 't-in', 'c-in'], out: ['Pulled', 't-out', 'c-out'], adj: ['Adjusted', 't-adj', 'c-adj'] }[m.type] || ['Move', 't-adj', 'c-adj'];
+  var sub = [m.reason, m.vendor, m.ref ? 'Ref ' + m.ref : ''].filter(Boolean).join(' · ');
+  return '<div class="row"><span class="tag ' + t[1] + '">' + t[0] + '</span><div class="grow"><span class="t1">' + esc(m.name) + '</span>' +
+    '<span class="t2b">' + esc(m.user_name) + ' · ' + esc(fmtWhen(m.at)) + '</span><span class="t2">' + esc(sub) + '</span></div>' +
+    '<span class="num ' + t[2] + '" style="font-size:20px">' + (m.delta > 0 ? '+' : '−') + Math.abs(m.delta) + '</span></div>';
+}
+
+/* ---------- rendering ---------- */
+var raf = 0;
+function soon() { if (!raf) raf = requestAnimationFrame(function () { raf = 0; refresh(); }); }
+function isField(el) { return el && (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA'); }
+function fill(id, html) {
+  var el = $(id); if (!el) return;
+  if (isField(document.activeElement) && el.contains(document.activeElement)) return;
+  el.innerHTML = html;
+}
+
+function renderAll() {
+  var app = $('app');
+  if (!S.me) { app.innerHTML = loginView(); return; }
+  var store = S.settings.store || 'Key Food';
+  app.innerHTML =
+    '<header class="top"><div class="brand"><b>STOCKROOM</b><span>' + esc(store) + '</span></div>' +
+    '<div class="who"><span>' + esc(S.me.name) + '</span><button type="button" data-act="signout">Switch</button></div></header>' +
+    '<div id="f-banner"></div>' +
+    '<main id="main"></main>' +
+    '<nav class="tabs" aria-label="Main navigation"><div class="in" id="f-nav"></div></nav>';
+  renderScreen();
+}
+
+function renderScreen() {
+  var main = $('main'); if (!main) return;
+  if (S.screen !== 'scan') stopCam();
+  var v = { home: homeView, scan: scanView, stock: stockView, panel: panelView, log: logView }[S.screen] || homeView;
+  main.innerHTML = v();
+  refresh(true);
+  if (S.screen === 'scan') { var c = $('code'); if (c && !('ontouchstart' in window)) c.focus(); }
+}
+
+function refresh() {
+  if (!S.me) { if (!$('pinpad') && !$('people')) renderAll(); return; }
+  fill('f-banner', !navigator.onLine ? '<div class="banner">You are offline. Changes will not save until the connection is back.</div>' : '');
+  fill('f-nav', navView());
+  var s = S.screen;
+  if (s === 'home') { fill('f-kpis', kpisHtml()); fill('f-onboard', onboardHtml()); fill('f-low', lowHtml()); fill('f-recent', S.moves.slice(0, 5).map(moveRow).join('') || '<p class="empty">No activity yet.</p>'); }
+  if (s === 'scan') { fill('f-seg', segHtml()); fill('f-vendor', vendorHtml()); fill('f-result', resultHtml()); fill('f-sess', sessionHtml()); }
+  if (s === 'stock') { fill('f-chips', stockChips()); fill('f-stocksum', stockSum()); fill('f-stock', stockHtml()); }
+  if (s === 'panel') { fill('f-ptabs', panelTabs()); fill('f-pbody', panelBody()); }
+  if (s === 'log') { fill('f-logchips', logChips()); fill('f-log', logHtml()); }
+}
+
+/* login */
+function loginView() {
+  var html = '<div class="login"><div class="brand"><b>STOCKROOM</b><span>' + esc(S.settings.store || 'Key Food') + '</span></div>';
+  if (!S.loginUser) {
+    html += '<h2>Who is working?</h2><div class="people" id="people">';
+    if (!S.users.length) html += '<p class="sub" style="color:#B9C7C0">Loading users…</p>';
+    S.users.forEach(function (u) {
+      html += '<button type="button" class="person" data-act="pickUser" data-id="' + esc(u.id) + '"><b>' + esc(u.name) + '</b><span>' + esc(u.role) + '</span></button>';
+    });
+    html += '</div><p class="loginmsg" style="margin-top:16px">' + esc(S.loginMsg) + '</p>';
+  } else {
+    html += '<h2>Hi ' + esc(S.loginUser.name.split(' ')[0]) + ', enter your PIN</h2><div class="dots" aria-hidden="true">';
+    for (var i = 0; i < 4; i++) html += '<i class="' + (i < S.pin.length ? 'f' : '') + '"></i>';
+    html += '</div><p class="loginmsg">' + esc(S.busy ? 'Checking…' : S.loginMsg) + '</p><div class="pad" id="pinpad">';
+    ['1', '2', '3', '4', '5', '6', '7', '8', '9'].forEach(function (d) { html += '<button type="button" data-act="pin" data-d="' + d + '">' + d + '</button>'; });
+    html += '<button type="button" class="txt" data-act="pinBack">Back</button><button type="button" data-act="pin" data-d="0">0</button><button type="button" class="txt" data-act="pinDel" aria-label="Delete digit">Delete</button></div>';
+  }
+  return html + '</div>';
+}
+
+function navView() {
+  function b(s, label, icon) { return '<button type="button" class="tab' + (S.screen === s ? ' on' : '') + '" data-act="go" data-s="' + s + '">' + icon + label + '</button>'; }
+  return b('home', 'Home', IC.home) + b('stock', 'Stock', IC.box) +
+    '<button type="button" class="tab' + (S.screen === 'scan' ? ' on' : '') + '" data-act="go" data-s="scan" aria-label="Scan"><span class="fab">' + IC.scan + '</span>Scan</button>' +
+    b('panel', 'Panel', IC.panel) + b('log', 'History', IC.clock);
+}
+
+/* home */
+function homeView() {
+  return '<div class="stack"><div><h1>Stockroom overview</h1><p class="sub">' + esc(new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })) + '</p></div>' +
+    '<div id="f-onboard"></div><div class="grid2" id="f-kpis"></div>' +
+    '<div class="grid2"><button type="button" class="big in" data-act="start" data-mode="in">' + IC.down + 'Receive</button><button type="button" class="big out" data-act="start" data-mode="out">' + IC.up + 'Pull to floor</button></div>' +
+    '<section class="card"><div class="cardh"><h2>Needs restock</h2><button type="button" class="link" data-act="go" data-s="stock" data-filter="low">View all</button></div><div id="f-low"></div></section>' +
+    '<section class="card"><div class="cardh"><h2>Recent activity</h2><button type="button" class="link" data-act="go" data-s="log">History</button></div><div id="f-recent"></div></section></div>';
+}
+function kpisHtml() {
+  var units = 0; S.products.forEach(function (p) { units += shownQty(p); });
+  return '<div class="kpi"><span>Products (SKU)</span><b>' + fmtNum(S.products.size) + '</b></div>' +
+    '<div class="kpi"><span>Units on hand</span><b>' + fmtNum(units) + '</b></div>' +
+    '<div class="kpi warn"><span>Low or out</span><b>' + fmtNum(lowList().length) + '</b></div>' +
+    '<div class="kpi good"><span>Received today</span><b>' + fmtNum(S.todayIn) + '</b></div>';
+}
+function onboardHtml() {
+  if (S.products.size) return '';
+  var steps = isManager()
+    ? 'Add your vendors and team in Panel, then scan the first delivery. You can also import a product list from CSV in Panel → Products.'
+    : 'No products yet. Scan the first delivery to start, or ask a manager to import the product list.';
+  return '<section class="card"><h2>Set up the stockroom</h2><p class="t2" style="font-size:14px;margin:0">' + esc(steps) + '</p>' +
+    (isManager() ? '<button type="button" class="btn ghost" data-act="go" data-s="panel" data-tab="vendors">Open Panel</button>' : '') + '</section>';
+}
+function lowHtml() {
+  var l = lowList();
+  if (!l.length) return '<p class="empty">' + (S.products.size ? 'Everything is above minimum.' : 'Nothing to restock yet.') + '</p>';
+  return l.slice(0, 5).map(function (p) {
+    var st = status(p);
+    return '<div class="row"><div class="grow"><span class="t1">' + esc(p.name) + '</span><span class="t2">' + shownQty(p) + ' of min. ' + p.par + ' · ' + esc(p.loc) + '</span></div><span class="pill ' + st.cls + '">' + st.label + '</span></div>';
+  }).join('');
+}
+
+/* scan */
+function scanView() {
+  return '<div class="stack"><div class="seg" id="f-seg"></div><div id="f-vendor"></div>' +
+    '<div class="finder" id="finder"><div id="reader"></div><span class="corner c1"></span><span class="corner c2"></span><span class="corner c3"></span><span class="corner c4"></span><span class="sweep"></span>' +
+    '<div class="finder-ui"><button type="button" class="camBtn" id="camBtn" data-act="cam">Use phone camera</button><p>Or scan with a Bluetooth scanner. The code is looked up automatically.</p></div></div>' +
+    '<div class="stack" style="gap:6px"><label for="code" style="font-size:13px;font-weight:600;color:var(--muted)">UPC / EAN code</label>' +
+    '<div class="inrow"><input id="code" class="inp" inputmode="numeric" autocomplete="off" enterkeyhint="search" placeholder="Scan or type the code" data-bind="code" value="' + esc(S.code) + '">' +
+    '<button type="button" class="btn" data-act="lookup">Search</button></div></div>' +
+    '<div id="f-result"></div><section class="stack" style="gap:6px"><div id="f-sess"></div></section></div>';
+}
+function segHtml() {
+  return '<button type="button" class="' + (S.mode === 'in' ? 'on-in' : '') + '" data-act="mode" data-mode="in">Receive (in)</button>' +
+    '<button type="button" class="' + (S.mode === 'out' ? 'on-out' : '') + '" data-act="mode" data-mode="out">Pull (out)</button>';
+}
+function vendorHtml() {
+  if (S.mode !== 'in') return '';
+  var o = '<option value="">Select vendor…</option>' + S.vendors.map(function (v) { return opt(v.name, S.vendor); }).join('');
+  var none = !S.vendors.length ? '<span class="t2">No vendors yet. ' + (isManager() ? 'Add them in Panel → Vendors.' : 'Ask a manager to add them.') + '</span>' : '';
+  return '<div class="vendorbox"><div class="cardh"><label for="vendor" style="font-size:13px;font-weight:700">Vendor for this delivery</label>' +
+    (isManager() ? '<button type="button" class="link" style="font-size:13px" data-act="go" data-s="panel" data-tab="vendors">Manage vendors</button>' : '') + '</div>' +
+    '<select id="vendor" class="inp ' + (S.vendor ? 'set' : 'need') + '" data-bind="vendor">' + o + '</select>' + none +
+    '<label class="f">Invoice / PO number (optional)<input class="inp" data-bind="ref" value="' + esc(S.ref) + '" autocomplete="off"></label></div>';
+}
+function findProduct(code) {
+  var c = digits(code); if (!c) return null;
+  var tries = [c, '0' + c, c.replace(/^0+/, '')];
+  for (var i = 0; i < tries.length; i++) { var p = S.products.get(tries[i]); if (p) return p; }
+  return null;
+}
+function resultHtml() {
+  var sc = S.scanned; if (!sc) return '';
+  var out = S.mode === 'out';
+  var p = sc.upc ? S.products.get(sc.upc) : null;
+  if (p) {
+    return '<section class="result' + (out ? ' out' : '') + '"><div><div class="kicker ' + (out ? 'c-out' : 'c-in') + '">Product found</div>' +
+      '<div style="font-size:18px;font-weight:700">' + esc(p.name) + '</div><div class="mono t2" style="font-size:13px">' + esc(p.upc) + '</div>' +
+      '<div class="t2" style="font-size:13px">' + esc(p.dept) + ' · Location ' + esc(p.loc) + ' · On hand: <b style="color:var(--ink)">' + shownQty(p) + ' ' + esc(p.unit) + '</b></div></div>' +
+      stepperHtml(p.unit) +
+      '<div class="grid3"><button type="button" class="btn ghost" data-act="qty" data-n="6">+6</button><button type="button" class="btn ghost" data-act="qty" data-n="12">+12</button><button type="button" class="btn ghost" data-act="qty" data-n="24">+24</button></div>' +
+      '<div style="display:flex;gap:8px"><button type="button" class="btn ghost" data-act="cancelScan">Cancel</button>' +
+      '<button type="button" class="btn ' + (out ? 'orange' : 'green') + '" style="flex:1" data-act="confirm"' + (S.busy ? ' disabled' : '') + '>' +
+      (out ? 'Confirm pull −' : 'Confirm receipt +') + S.qty + '</button></div></section>';
+  }
+  if (out) {
+    return '<section class="result new"><div class="kicker c-out">Code not in the system</div><div class="mono">' + esc(sc.code) + '</div>' +
+      '<p class="t2" style="margin:0;font-size:14px">You can only pull products that exist. Switch to Receive to add it with its first delivery.</p>' +
+      '<button type="button" class="btn ghost" data-act="mode" data-mode="in">Switch to Receive</button></section>';
+  }
+  var d = S.newP.dept || depts()[0];
+  return '<section class="result new"><div><div class="kicker c-out">Code not in the system</div><div class="mono" style="font-size:15px">' + esc(sc.code) + '</div>' +
+    '<p class="t2" style="margin:2px 0 0;font-size:13px">Create the product now and it is received in one step.</p></div>' +
+    '<label class="f">Product name<input class="inp" data-bind="newP.name" value="' + esc(S.newP.name) + '" placeholder="e.g. Long grain rice 5 lb"></label>' +
+    '<div class="grid2"><label class="f">Department<select class="inp" data-bind="newP.dept">' + depts().map(function (x) { return opt(x, d); }).join('') + '</select></label>' +
+    '<label class="f">Unit<select class="inp" data-bind="newP.unit">' + UNITS.map(function (x) { return opt(x, S.newP.unit); }).join('') + '</select></label></div>' +
+    '<label class="f">Stockroom location<input class="inp" data-bind="newP.loc" value="' + esc(S.newP.loc) + '" placeholder="e.g. A-03"></label>' +
+    stepperHtml(S.newP.unit) +
+    '<div style="display:flex;gap:8px"><button type="button" class="btn ghost" data-act="cancelScan">Cancel</button>' +
+    '<button type="button" class="btn green" style="flex:1" data-act="createReceive"' + (S.busy ? ' disabled' : '') + '>Create and receive</button></div></section>';
+}
+function stepperHtml(unit) {
+  return '<div class="stepper"><button type="button" class="sbtn" aria-label="Subtract one" data-act="qty" data-n="-1">' + IC.minus + '</button>' +
+    '<div style="display:flex;flex-direction:column;align-items:center"><label class="sr" for="qtyin">Quantity</label><input id="qtyin" class="qtyin" inputmode="numeric" data-bind="qty" value="' + S.qty + '"><span class="t2">' + esc(unit) + '</span></div>' +
+    '<button type="button" class="sbtn plus" aria-label="Add one" data-act="qty" data-n="1">' + IC.plus + '</button></div>';
+}
+function sessionHtml() {
+  var mine = S.moves.filter(function (m) { return S.session.indexOf(m.id) >= 0; });
+  var total = mine.filter(function (m) { return m.type === 'in'; }).reduce(function (a, m) { return a + m.delta; }, 0);
+  var h = '<h2 style="font-size:14px;color:var(--muted)">This session · ' + mine.length + ' moves' + (total ? ' · ' + fmtNum(total) + ' units received' : '') + '</h2>';
+  if (!mine.length) return h + '<p class="empty" style="font-size:13px">Confirmed moves show here so you can review the delivery before you finish.</p>';
+  return h + '<div class="list">' + mine.slice(0, 8).map(moveRow).join('') + '</div>';
+}
+
+/* stock */
+function stockView() {
+  return '<div class="stack"><h1>Stock</h1><label for="q" class="sr">Search products</label>' +
+    '<input id="q" class="inp" data-bind="search" placeholder="Search by name, code or location" value="' + esc(S.search) + '" autocomplete="off">' +
+    '<div class="chips" id="f-chips"></div><span class="t2" style="font-size:13px" id="f-stocksum"></span><div class="stack" id="f-stock" style="gap:10px"></div></div>';
+}
+function stockFiltered() {
+  var q = S.search.trim().toLowerCase();
+  return productList().filter(function (p) {
+    if (S.dept === '__low' && status(p).rank === 2) return false;
+    if (S.dept !== 'All' && S.dept !== '__low' && p.dept !== S.dept) return false;
+    return !q || (p.name + ' ' + p.upc + ' ' + p.loc).toLowerCase().indexOf(q) >= 0;
+  });
+}
+function stockChips() {
+  var c = [['All', 'All'], ['__low', 'Below minimum']].concat(depts().map(function (d) { return [d, d]; }));
+  return c.map(function (x) { return '<button type="button" class="chip' + (S.dept === x[0] ? ' on' : '') + '" data-act="dept" data-v="' + esc(x[0]) + '">' + esc(x[1]) + '</button>'; }).join('');
+}
+function stockSum() { var l = stockFiltered(); return fmtNum(l.length) + ' products · ' + l.filter(function (p) { return status(p).rank < 2; }).length + ' below minimum'; }
+function stockHtml() {
+  var l = stockFiltered();
+  if (!l.length) return '<p class="empty">' + (S.products.size ? 'No products match.' : 'No products yet. Scan a delivery to add the first one.') + '</p>';
+  var more = l.length > 150 ? '<p class="empty">Showing 150 of ' + fmtNum(l.length) + '. Search to narrow it down.</p>' : '';
+  return l.slice(0, 150).map(function (p) {
+    var st = status(p), q = shownQty(p);
+    return '<article class="item"><div class="itemh"><div class="grow"><span style="font-size:15px;font-weight:700">' + esc(p.name) + '</span>' +
+      '<span class="t2"><span class="mono">' + esc(p.upc) + '</span> · ' + esc(p.loc) + '</span></div>' +
+      '<div style="display:flex;align-items:center;gap:6px"><span class="pill ' + st.cls + '">' + st.label + '</span>' +
+      '<button type="button" class="iconbtn" aria-label="Edit ' + esc(p.name) + '" data-act="editProduct" data-upc="' + esc(p.upc) + '">' + IC.pen + '</button></div></div>' +
+      '<div style="display:flex;align-items:center;gap:12px"><div class="grow" style="gap:4px"><div class="bar"><i style="width:' + pct(p) + '%;background:' + st.bar + '"></i></div><span class="t2">Minimum ' + p.par + ' · ' + esc(p.unit) + '</span></div>' +
+      '<button type="button" class="qbtn" aria-label="Subtract one" data-act="quick" data-upc="' + esc(p.upc) + '" data-n="-1"' + (q <= 0 ? ' disabled' : '') + '>' + IC.minus + '</button>' +
+      '<span class="num" style="font-size:30px;min-width:44px;text-align:center">' + q + '</span>' +
+      '<button type="button" class="qbtn plus" aria-label="Add one" data-act="quick" data-upc="' + esc(p.upc) + '" data-n="1">' + IC.plus + '</button></div></article>';
+  }).join('') + more;
+}
+
+/* panel */
+function panelView() {
+  return '<div class="stack"><div><h1>Control panel</h1><p class="sub">Products, vendors, people and store settings.</p></div>' +
+    '<div class="seg" id="f-ptabs" style="--n:' + (isManager() ? 4 : 3) + '"></div><div id="f-pbody"></div></div>';
+}
+function panelTabs() {
+  var t = [['products', 'Products'], ['vendors', 'Vendors'], ['users', 'Users']];
+  if (isManager()) t.push(['settings', 'Settings']);
+  return t.map(function (x) { return '<button type="button" class="' + (S.panelTab === x[0] ? 'on' : '') + '" style="font-size:14px" data-act="ptab" data-v="' + x[0] + '">' + x[1] + '</button>'; }).join('');
+}
+function panelBody() {
+  if (S.pform) return productForm();
+  if (S.vform) return vendorForm();
+  if (S.uform) return userForm();
+  if (S.panelTab === 'vendors') return vendorsTab();
+  if (S.panelTab === 'users') return usersTab();
+  if (S.panelTab === 'settings' && isManager()) return settingsTab();
+  return productsTab();
+}
+function productsTab() {
+  var q = S.adminQ.trim().toLowerCase();
+  var l = productList().filter(function (p) { return !q || (p.name + ' ' + p.upc).toLowerCase().indexOf(q) >= 0; });
+  return '<div class="stack"><div class="grid2"><button type="button" class="btn" data-act="newProduct">New product</button>' +
+    (isManager() ? '<button type="button" class="btn ghost" data-act="importCsv">Import CSV</button>' : '<span></span>') +
+    '<button type="button" class="btn ghost" data-act="exportInv">Export inventory</button><button type="button" class="btn ghost" data-act="exportLog">Export history</button></div>' +
+    '<input class="inp" data-bind="adminQ" placeholder="Find a product" value="' + esc(S.adminQ) + '" aria-label="Find a product" autocomplete="off">' +
+    '<div class="list" id="f-adminlist">' + adminRows(l) + '</div></div>';
+}
+function adminRows(l) {
+  if (!l.length) return '<div class="row"><span class="empty">No products.</span></div>';
+  return l.slice(0, 200).map(function (p) {
+    return '<div class="row"><div class="grow"><span class="t1">' + esc(p.name) + '</span><span class="t2">' + esc(p.dept) + ' · ' + esc(p.loc) + ' · min. ' + p.par + '</span></div>' +
+      '<span class="num ' + status(p).cls.replace('ok', 'c-in').replace('outs', 'c-out').replace('low', 'c-out') + '" style="font-size:22px;background:none">' + shownQty(p) + '</span>' +
+      '<button type="button" class="btn ghost sm" data-act="editProduct" data-upc="' + esc(p.upc) + '">Edit</button></div>';
+  }).join('');
+}
+function productForm() {
+  var f = S.pform, editing = !!f.oldUpc, p = editing ? S.products.get(f.oldUpc) : null;
+  var h = '<div class="stack"><button type="button" class="link" style="align-self:flex-start" data-act="closeForm">‹ Back to products</button>' +
+    '<h1 style="font-size:26px">' + (editing ? 'Edit product' : 'New product') + '</h1>' +
+    '<label class="f">Name<input class="inp" data-bind="pform.name" value="' + esc(f.name) + '"></label>' +
+    '<label class="f">UPC / EAN code<input class="inp mono" inputmode="numeric" data-bind="pform.upc" value="' + esc(f.upc) + '"></label>' +
+    '<div class="grid2"><label class="f">Department<select class="inp" data-bind="pform.dept">' + depts().map(function (x) { return opt(x, f.dept); }).join('') + '</select></label>' +
+    '<label class="f">Location<input class="inp" data-bind="pform.loc" value="' + esc(f.loc) + '"></label>' +
+    '<label class="f">Unit<select class="inp" data-bind="pform.unit">' + UNITS.map(function (x) { return opt(x, f.unit); }).join('') + '</select></label>' +
+    '<label class="f">Minimum stock<input class="inp" inputmode="numeric" data-bind="pform.par" value="' + esc(f.par) + '"></label></div>' +
+    '<div class="countbox"><label class="f">' + (editing ? 'Counted quantity · system shows ' + (p ? p.qty : 0) : 'Starting quantity') +
+    '<input class="inp num" style="font-size:22px" inputmode="numeric" data-bind="pform.qty" value="' + esc(f.qty) + '"></label>';
+  if (editing) h += '<label class="f">Reason if the count changes<select class="inp" data-bind="pform.reason">' + REASONS.map(function (x) { return opt(x, f.reason); }).join('') + '</select></label>';
+  h += '</div><button type="button" class="btn green wide" style="min-height:54px;font-size:16px" data-act="saveProduct"' + (S.busy ? ' disabled' : '') + '>Save changes</button>';
+  if (editing && isManager()) h += '<button type="button" class="btn danger wide' + (S.confirmDel ? ' armed' : '') + '" data-act="deleteProduct">' + (S.confirmDel ? 'Tap again to delete' : 'Delete product') + '</button>';
+  return h + '</div>';
+}
+function vendorsTab() {
+  var h = '<div class="stack">';
+  if (isManager()) h += '<button type="button" class="btn" data-act="newVendor">Add vendor</button>';
+  h += '<span class="t2" style="font-size:13px">' + S.vendors.length + ' vendors · these appear in the receiving dropdown' + (isManager() ? '' : ' · only managers can edit') + '</span><div class="list">';
+  if (!S.vendors.length) h += '<div class="row"><span class="empty">No vendors yet.</span></div>';
+  S.vendors.forEach(function (v) {
+    var bits = [v.contact, v.phone, v.days ? 'Delivers ' + v.days : ''].filter(Boolean);
+    h += '<div class="row"><div class="grow"><span class="t1" style="font-weight:700">' + esc(v.name) + '</span><span class="t2">' + esc(bits.length ? bits.join(' · ') : 'No contact on file') + '</span></div>' +
+      (isManager() ? '<button type="button" class="btn ghost sm" data-act="editVendor" data-id="' + esc(v.id) + '">Edit</button>' : '') + '</div>';
+  });
+  return h + '</div></div>';
+}
+function vendorForm() {
+  var f = S.vform;
+  return '<div class="stack"><button type="button" class="link" style="align-self:flex-start" data-act="closeForm">‹ Back to vendors</button>' +
+    '<h1 style="font-size:26px">' + (f.id ? 'Edit vendor' : 'New vendor') + '</h1>' +
+    '<label class="f">Vendor name<input class="inp" data-bind="vform.name" value="' + esc(f.name) + '" placeholder="e.g. UNFI"></label>' +
+    '<label class="f">Sales rep / contact<input class="inp" data-bind="vform.contact" value="' + esc(f.contact) + '" placeholder="Optional"></label>' +
+    '<label class="f">Phone<input class="inp" inputmode="tel" data-bind="vform.phone" value="' + esc(f.phone) + '" placeholder="Optional"></label>' +
+    '<label class="f">Delivery days<input class="inp" data-bind="vform.days" value="' + esc(f.days) + '" placeholder="e.g. Mon, Thu"></label>' +
+    '<button type="button" class="btn green wide" style="min-height:54px;font-size:16px" data-act="saveVendor"' + (S.busy ? ' disabled' : '') + '>Save vendor</button>' +
+    (f.id ? '<button type="button" class="btn danger wide' + (S.confirmDel ? ' armed' : '') + '" data-act="deleteVendor">' + (S.confirmDel ? 'Tap again to remove' : 'Remove vendor') + '</button>' : '') + '</div>';
+}
+function usersTab() {
+  var counts = {}; S.moves.forEach(function (m) { counts[m.user_name] = (counts[m.user_name] || 0) + 1; });
+  var h = '<div class="stack">';
+  if (isManager()) h += '<button type="button" class="btn" data-act="newUser">Add user</button>';
+  h += '<span class="t2" style="font-size:13px">Each person signs in with their own PIN, so every move records who did it and when.' + (isManager() ? '' : ' Only managers can edit users.') + '</span><div class="list">';
+  S.users.forEach(function (u) {
+    h += '<div class="row"><span class="avatar">' + esc(initials(u.name)) + '</span><div class="grow"><span class="t1" style="font-weight:700">' + esc(u.name) + '</span>' +
+      '<span class="t2">' + esc(u.role) + (counts[u.name] ? ' · ' + counts[u.name] + ' recent moves' : '') + (S.me && u.id === S.me.id ? ' · signed in now' : '') + '</span></div>' +
+      (isManager() ? '<button type="button" class="btn ghost sm" data-act="editUser" data-id="' + esc(u.id) + '">Edit</button>' : '') + '</div>';
+  });
+  return h + '</div></div>';
+}
+function userForm() {
+  var f = S.uform;
+  return '<div class="stack"><button type="button" class="link" style="align-self:flex-start" data-act="closeForm">‹ Back to users</button>' +
+    '<h1 style="font-size:26px">' + (f.id ? 'Edit user' : 'New user') + '</h1>' +
+    '<label class="f">Full name<input class="inp" data-bind="uform.name" value="' + esc(f.name) + '" placeholder="e.g. Maria Lopez"></label>' +
+    '<label class="f">Role<select class="inp" data-bind="uform.role">' + ROLES.map(function (x) { return opt(x, f.role); }).join('') + '</select></label>' +
+    '<label class="f">' + (f.id ? 'New 4-digit PIN (leave blank to keep the current one)' : '4-digit PIN') +
+    '<input class="inp mono" inputmode="numeric" maxlength="4" autocomplete="off" data-bind="uform.pin" value="' + esc(f.pin) + '"></label>' +
+    '<p class="t2" style="margin:0">Managers can edit vendors, users and settings, and delete products. Everyone else can receive, pull and count.</p>' +
+    '<button type="button" class="btn green wide" style="min-height:54px;font-size:16px" data-act="saveUser"' + (S.busy ? ' disabled' : '') + '>Save user</button>' +
+    (f.id && f.id !== S.me.id ? '<button type="button" class="btn danger wide' + (S.confirmDel ? ' armed' : '') + '" data-act="deleteUser">' + (S.confirmDel ? 'Tap again to remove' : 'Remove user') + '</button>' : '') + '</div>';
+}
+function settingsTab() {
+  var f = S.setForm || (S.setForm = { store: S.settings.store || '', depts: depts().join('\n') });
+  return '<div class="stack"><label class="f">Store name shown in the header<input class="inp" data-bind="setForm.store" value="' + esc(f.store) + '"></label>' +
+    '<label class="f">Departments (one per line)<textarea class="inp" data-bind="setForm.depts">' + esc(f.depts) + '</textarea></label>' +
+    '<button type="button" class="btn green wide" style="min-height:54px;font-size:16px" data-act="saveSettings"' + (S.busy ? ' disabled' : '') + '>Save settings</button></div>';
+}
+
+/* history */
+function logView() {
+  return '<div class="stack"><h1>History</h1><div class="chips" id="f-logchips"></div><div id="f-log"></div></div>';
+}
+function logChips() {
+  return [['all', 'All'], ['in', 'Received'], ['out', 'Pulled'], ['adj', 'Adjustments']].map(function (x) {
+    return '<button type="button" class="chip' + (S.logFilter === x[0] ? ' on' : '') + '" data-act="logf" data-v="' + x[0] + '">' + x[1] + '</button>';
+  }).join('');
+}
+function logHtml() {
+  var l = S.moves.filter(function (m) { return S.logFilter === 'all' || m.type === S.logFilter; });
+  return '<div class="list">' + (l.map(moveRow).join('') || '<div class="row"><span class="empty">No moves yet.</span></div>') + '</div>' +
+    (!S.movesEnd ? '<button type="button" class="btn ghost wide" style="margin-top:12px" data-act="moreLog">Load older moves</button>' : '');
+}
+
+/* ---------- actions ---------- */
+function go(screen, opts) {
+  opts = opts || {};
+  S.screen = screen; S.confirmDel = false;
+  if (opts.tab) { S.panelTab = opts.tab; S.pform = S.vform = S.uform = null; }
+  if (screen === 'stock' && opts.filter === 'low') S.dept = '__low';
+  if (screen === 'panel') { if (S.panelTab === 'users') loadUsers().then(soon); }
+  renderScreen(); window.scrollTo(0, 0);
+}
+function lookup(raw) {
+  var c = digits(raw);
+  if (c.length < 6) { toast('That code is too short. Codes have at least 6 digits.', true); return; }
+  var p = findProduct(c);
+  S.code = c; S.qty = 1; S.newP = { name: '', dept: '', loc: '', unit: 'Each' };
+  S.scanned = p ? { upc: p.upc, code: c } : { upc: null, code: c };
+  var ci = $('code'); if (ci) ci.value = c;
+  fill('f-result', resultHtml());
+  var r = $('f-result'); if (r && r.scrollIntoView) r.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function afterMove(res, label) {
+  if (res && res.ok === false && res.error === 'NOT_ENOUGH') { toast('Not enough stock: only ' + res.qty + ' on hand.', true); return false; }
+  return true;
+}
+function newestMoveIdFor(upc) {
+  // pick up the id of the move we just created so it shows in "This session"
+  return sb.from('kf_moves').select('*').eq('upc', upc).order('at', { ascending: false }).limit(1).then(function (r) {
+    var m = r.data && r.data[0]; if (!m) return;
+    if (!S.moves.some(function (x) { return x.id === m.id; })) S.moves.unshift(m);
+    if (S.session.indexOf(m.id) < 0) S.session.unshift(m.id);
+  });
+}
+function confirmMove() {
+  var p = S.scanned && S.products.get(S.scanned.upc); if (!p || S.busy) return;
+  var out = S.mode === 'out', q = parseInt(S.qty, 10) || 0;
+  if (q < 1) { toast('Enter a quantity of at least 1.', true); return; }
+  if (!out && !S.vendor) { toast('Select the vendor for this delivery first.', true); var v = $('vendor'); if (v) v.focus(); return; }
+  if (out && q > shownQty(p)) { toast('Not enough stock: only ' + shownQty(p) + ' on hand.', true); return; }
+  S.busy = true; fill('f-result', resultHtml());
+  rpc('kf_move', { p_upc: p.upc, p_delta: out ? -q : q, p_type: out ? 'out' : 'in', p_reason: out ? 'Pulled to floor' : 'Receiving', p_vendor: out ? '' : S.vendor, p_ref: out ? '' : S.ref, p_absolute: null })
+    .then(function (res) {
+      if (!afterMove(res)) return;
+      p.qty = res.qty; S.products.set(p.upc, p);
+      toast((out ? 'Pulled −' : 'Received +') + q + ' · ' + p.name);
+      S.scanned = null; S.code = ''; S.qty = 1;
+      var ci = $('code'); if (ci) { ci.value = ''; if (!('ontouchstart' in window)) ci.focus(); }
+      return newestMoveIdFor(p.upc);
+    })
+    .catch(function (e) { toast(errMsg(e), true); })
+    .then(function () { S.busy = false; refresh(); });
+}
+function createReceive() {
+  var sc = S.scanned; if (!sc || S.busy) return;
+  var name = S.newP.name.trim(), q = parseInt(S.qty, 10) || 0;
+  if (!name) { toast('Enter the product name.', true); return; }
+  if (!S.vendor) { toast('Select the vendor for this delivery first.', true); return; }
+  if (q < 1) { toast('Enter a quantity of at least 1.', true); return; }
+  S.busy = true; fill('f-result', resultHtml());
+  var dept = S.newP.dept || depts()[0];
+  rpc('kf_save_product', { p_old_upc: null, p_upc: sc.code, p_name: name, p_dept: dept, p_loc: S.newP.loc, p_unit: S.newP.unit, p_par: 0 })
+    .then(function () { return rpc('kf_move', { p_upc: sc.code, p_delta: q, p_type: 'in', p_reason: 'New product', p_vendor: S.vendor, p_ref: S.ref, p_absolute: null }); })
+    .then(function () { return Promise.all([loadProducts(), newestMoveIdFor(sc.code)]); })
+    .then(function () { toast('Created and received +' + q + ' · ' + name); S.scanned = null; S.code = ''; S.qty = 1; var ci = $('code'); if (ci) ci.value = ''; })
+    .catch(function (e) { toast(errMsg(e), true); })
+    .then(function () { S.busy = false; refresh(); });
+}
+var quickT = {};
+function quick(upc, n) {
+  var p = S.products.get(upc); if (!p) return;
+  if (shownQty(p) + n < 0) return;
+  S.pending[upc] = (S.pending[upc] || 0) + n;
+  refresh();
+  clearTimeout(quickT[upc]);
+  quickT[upc] = setTimeout(function () {
+    var d = S.pending[upc] || 0; delete S.pending[upc];
+    if (!d) return;
+    rpc('kf_move', { p_upc: upc, p_delta: d, p_type: 'adj', p_reason: 'Quick adjust', p_vendor: '', p_ref: '', p_absolute: null })
+      .then(function (res) { if (res && res.ok === false) { toast('Not enough stock: only ' + res.qty + ' on hand.', true); return; } p.qty = res.qty; })
+      .catch(function (e) { toast(errMsg(e), true); })
+      .then(refresh);
+  }, 700);
+}
+function openProduct(upc) {
+  var p = upc ? S.products.get(upc) : null;
+  S.pform = p ? { oldUpc: p.upc, name: p.name, upc: p.upc, dept: p.dept, loc: p.loc, unit: p.unit, par: String(p.par), qty: String(p.qty), qty0: String(p.qty), reason: REASONS[0] }
+              : { oldUpc: null, name: '', upc: '', dept: depts()[0], loc: '', unit: 'Each', par: '0', qty: '0', qty0: '0', reason: REASONS[0] };
+  S.vform = S.uform = null; S.confirmDel = false; S.panelTab = 'products';
+  if (S.screen !== 'panel') { S.screen = 'panel'; renderScreen(); } else refresh();
+  window.scrollTo(0, 0);
+}
+function saveProduct() {
+  var f = S.pform; if (!f || S.busy) return;
+  var upc = digits(f.upc), name = f.name.trim(), par = parseInt(f.par, 10) || 0, qty = parseInt(f.qty, 10);
+  if (!name) { toast('Enter the product name.', true); return; }
+  if (upc.length < 6 || upc.length > 14) { toast('Codes must be 6 to 14 digits.', true); return; }
+  if (isNaN(qty) || qty < 0) { toast('Quantity must be 0 or more.', true); return; }
+  S.busy = true; refresh();
+  rpc('kf_save_product', { p_old_upc: f.oldUpc, p_upc: upc, p_name: name, p_dept: f.dept, p_loc: f.loc, p_unit: f.unit, p_par: par })
+    .then(function () {
+      var changed = String(qty) !== String(f.qty0);
+      if (f.oldUpc && changed) return rpc('kf_move', { p_upc: upc, p_delta: 0, p_type: 'adj', p_reason: f.reason, p_vendor: '', p_ref: '', p_absolute: qty });
+      if (!f.oldUpc && qty > 0) return rpc('kf_move', { p_upc: upc, p_delta: 0, p_type: 'adj', p_reason: 'Manual add', p_vendor: '', p_ref: '', p_absolute: qty });
+    })
+    .then(function () { return loadProducts(); })
+    .then(function () { toast('Changes saved · ' + name); S.pform = null; })
+    .catch(function (e) { toast(errMsg(e), true); })
+    .then(function () { S.busy = false; refresh(); });
+}
+function deleteProduct() {
+  var f = S.pform; if (!f || !f.oldUpc) return;
+  if (!S.confirmDel) { S.confirmDel = true; refresh(); return; }
+  rpc('kf_delete_product', { p_upc: f.oldUpc })
+    .then(function () { S.products.delete(f.oldUpc); toast('Product deleted · ' + f.name); S.pform = null; S.confirmDel = false; })
+    .catch(function (e) { toast(errMsg(e), true); }).then(refresh);
+}
+function saveVendor() {
+  var f = S.vform; if (!f || S.busy) return;
+  if (!f.name.trim()) { toast('Enter the vendor name.', true); return; }
+  S.busy = true; refresh();
+  var oldName = f.id ? (S.vendors.filter(function (v) { return v.id === f.id; })[0] || {}).name : null;
+  rpc('kf_save_vendor', { p_id: f.id || null, p_name: f.name, p_contact: f.contact, p_phone: f.phone, p_days: f.days })
+    .then(function () { if (oldName && S.vendor === oldName) S.vendor = f.name.trim(); return loadVendors(); })
+    .then(function () { toast('Vendor saved · ' + f.name.trim()); S.vform = null; })
+    .catch(function (e) { toast(errMsg(e), true); })
+    .then(function () { S.busy = false; refresh(); });
+}
+function deleteVendor() {
+  var f = S.vform; if (!f || !f.id) return;
+  if (!S.confirmDel) { S.confirmDel = true; refresh(); return; }
+  rpc('kf_delete_vendor', { p_id: f.id }).then(loadVendors)
+    .then(function () { toast('Vendor removed. Past receipts keep its name.'); S.vform = null; S.confirmDel = false; })
+    .catch(function (e) { toast(errMsg(e), true); }).then(refresh);
+}
+function saveUser() {
+  var f = S.uform; if (!f || S.busy) return;
+  var pin = digits(f.pin);
+  if (!f.name.trim()) { toast('Enter the person\'s name.', true); return; }
+  if (!f.id && pin.length !== 4) { toast('New users need a 4-digit PIN.', true); return; }
+  if (pin && pin.length !== 4) { toast('PIN must be exactly 4 digits.', true); return; }
+  S.busy = true; refresh();
+  rpc('kf_save_user', { p_id: f.id || null, p_name: f.name, p_role: f.role, p_pin: pin })
+    .then(function () { if (f.id === S.me.id) S.me.name = f.name.trim(); return loadUsers(); })
+    .then(function () { toast('User saved · ' + f.name.trim()); S.uform = null; renderAll(); })
+    .catch(function (e) { toast(errMsg(e), true); })
+    .then(function () { S.busy = false; refresh(); });
+}
+function deleteUser() {
+  var f = S.uform; if (!f || !f.id) return;
+  if (!S.confirmDel) { S.confirmDel = true; refresh(); return; }
+  rpc('kf_delete_user', { p_id: f.id }).then(loadUsers)
+    .then(function () { toast('User removed. Their past moves stay in History.'); S.uform = null; S.confirmDel = false; })
+    .catch(function (e) { toast(errMsg(e), true); }).then(refresh);
+}
+function saveSettings() {
+  var f = S.setForm; if (!f || S.busy) return;
+  var list = f.depts.split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
+  if (!list.length) { toast('Keep at least one department.', true); return; }
+  S.busy = true; refresh();
+  rpc('kf_save_setting', { p_key: 'store', p_value: f.store.trim() || 'Key Food' })
+    .then(function () { return rpc('kf_save_setting', { p_key: 'depts', p_value: list }); })
+    .then(loadSettings)
+    .then(function () { toast('Settings saved'); S.setForm = null; renderAll(); })
+    .catch(function (e) { toast(errMsg(e), true); })
+    .then(function () { S.busy = false; refresh(); });
+}
+
+/* ---------- CSV ---------- */
+function csvCell(v) { var s = String(v == null ? '' : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+function download(name, text) {
+  var blob = new Blob(['\ufeff' + text], { type: 'text/csv;charset=utf-8' });
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+function stamp() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function exportInv() {
+  var rows = [['upc', 'name', 'department', 'location', 'unit', 'quantity', 'minimum', 'status']];
+  productList().forEach(function (p) { rows.push([p.upc, p.name, p.dept, p.loc, p.unit, p.qty, p.par, status(p).label]); });
+  download('inventory-' + stamp() + '.csv', rows.map(function (r) { return r.map(csvCell).join(','); }).join('\n'));
+}
+function exportLog() {
+  toast('Preparing history…');
+  var all = [], size = 1000;
+  function page(from) {
+    return sb.from('kf_moves').select('*').order('at', { ascending: false }).range(from, from + size - 1).then(function (r) {
+      if (r.error) throw r.error; all = all.concat(r.data || []);
+      if ((r.data || []).length === size && all.length < 50000) return page(from + size);
+    });
+  }
+  page(0).then(function () {
+    var rows = [['date_time', 'type', 'upc', 'product', 'change', 'qty_after', 'user', 'reason', 'vendor', 'invoice_po']];
+    all.forEach(function (m) { rows.push([new Date(m.at).toLocaleString('en-US'), m.type, m.upc, m.name, m.delta, m.qty_after, m.user_name, m.reason, m.vendor, m.ref]); });
+    download('history-' + stamp() + '.csv', rows.map(function (r) { return r.map(csvCell).join(','); }).join('\n'));
+  }).catch(function (e) { toast(errMsg(e), true); });
+}
+function parseCSV(text) {
+  var rows = [], row = [], cell = '', q = false;
+  for (var i = 0; i < text.length; i++) {
+    var c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(cell); cell = ''; }
+    else if (c === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+    else if (c !== '\r') cell += c;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(function (r) { return r.some(function (x) { return String(x).trim(); }); });
+}
+function importCsv(file) {
+  var rd = new FileReader();
+  rd.onload = function () {
+    var rows = parseCSV(String(rd.result).replace(/^\ufeff/, ''));
+    if (rows.length < 2) { toast('The file has no product rows.', true); return; }
+    var head = rows[0].map(function (h) { return h.trim().toLowerCase(); });
+    function col(names) { for (var i = 0; i < names.length; i++) { var k = head.indexOf(names[i]); if (k >= 0) return k; } return -1; }
+    var ix = { upc: col(['upc', 'code', 'barcode', 'ean', 'codigo']), name: col(['name', 'product', 'description', 'nombre']), dept: col(['department', 'dept', 'departamento']),
+      loc: col(['location', 'loc', 'ubicacion']), unit: col(['unit', 'unidad']), qty: col(['quantity', 'qty', 'cantidad']), par: col(['minimum', 'min', 'par', 'minimo']) };
+    if (ix.upc < 0 || ix.name < 0) { toast('The CSV needs at least "upc" and "name" columns.', true); return; }
+    var data = rows.slice(1), done = 0, created = 0, updated = 0, failed = 0;
+    function val(r, k) { return k >= 0 ? String(r[k] || '').trim() : ''; }
+    function next(i) {
+      if (i >= data.length) {
+        loadProducts().then(function () { refresh(); toast('Import finished · ' + created + ' new, ' + updated + ' updated' + (failed ? ', ' + failed + ' skipped' : ''), failed > 0); });
+        return;
+      }
+      var r = data[i], upc = digits(val(r, ix.upc)), exists = S.products.has(upc);
+      var unit = val(r, ix.unit); if (UNITS.indexOf(unit) < 0) unit = 'Each';
+      var dept = val(r, ix.dept) || depts()[0];
+      var par = parseInt(val(r, ix.par), 10) || 0, qty = parseInt(val(r, ix.qty), 10);
+      rpc('kf_save_product', { p_old_upc: exists ? upc : null, p_upc: upc, p_name: val(r, ix.name), p_dept: dept, p_loc: val(r, ix.loc), p_unit: unit, p_par: par })
+        .then(function () {
+          if (exists) updated++; else created++;
+          if (!exists && qty > 0) return rpc('kf_move', { p_upc: upc, p_delta: 0, p_type: 'adj', p_reason: 'CSV import', p_vendor: '', p_ref: '', p_absolute: qty });
+        })
+        .catch(function () { failed++; })
+        .then(function () { done++; if (done % 10 === 0) toast('Importing ' + done + ' of ' + data.length + '…'); next(i + 1); });
+    }
+    toast('Importing ' + data.length + ' rows…'); next(0);
+  };
+  rd.readAsText(file);
+}
+
+/* ---------- camera ---------- */
+var cam = null, lastHit = 0;
+function startCam() {
+  var L2 = window.__Html5QrcodeLibrary__ || {};
+  var Lib = window.Html5Qrcode || L2.Html5Qrcode, F = window.Html5QrcodeSupportedFormats || L2.Html5QrcodeSupportedFormats;
+  if (!Lib) { toast('The camera scanner did not load. Use a Bluetooth scanner or type the code.', true); return; }
+  var formats = F ? [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.CODE_128, F.CODE_39, F.ITF] : undefined;
+  try { cam = new Lib('reader', { verbose: false, formatsToSupport: formats, experimentalFeatures: { useBarCodeDetectorIfSupported: true } }); }
+  catch (e) { cam = null; toast('Camera is not available on this device.', true); return; }
+  cam.start({ facingMode: 'environment' }, { fps: 12, qrbox: function (w, h) { return { width: Math.floor(w * 0.85), height: Math.floor(h * 0.55) }; }, aspectRatio: 1.7 }, onCamCode, function () {})
+    .then(function () { var f = $('finder'); if (f) f.classList.add('live'); var b = $('camBtn'); if (b) b.textContent = 'Stop camera'; })
+    .catch(function () { cam = null; toast('Allow camera access in your browser settings, or use a Bluetooth scanner.', true); });
+}
+function stopCam() {
+  if (!cam) return;
+  var c = cam; cam = null;
+  c.stop().then(function () { try { c.clear(); } catch (e) {} }).catch(function () {});
+  var f = $('finder'); if (f) f.classList.remove('live'); var b = $('camBtn'); if (b) b.textContent = 'Use phone camera';
+}
+function beep() {
+  try { var A = window.AudioContext || window.webkitAudioContext; var ctx = new A(), o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.value = 1240; g.gain.value = 0.08; o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + 0.09); } catch (e) {}
+  if (navigator.vibrate) navigator.vibrate(60);
+}
+function onCamCode(text) {
+  if (Date.now() - lastHit < 1500) return; lastHit = Date.now();
+  beep(); stopCam(); lookup(text);
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-act]'); if (!b || b.disabled) return;
+  var a = b.getAttribute('data-act'), d = b.dataset;
+  switch (a) {
+    case 'pickUser': S.loginUser = S.users.filter(function (u) { return u.id === d.id; })[0] || null; S.pin = ''; S.loginMsg = ''; renderAll(); break;
+    case 'pin': if (S.busy || S.pin.length >= 4) return; S.pin += d.d; S.loginMsg = ''; renderAll(); if (S.pin.length === 4) tryPin(); break;
+    case 'pinDel': S.pin = S.pin.slice(0, -1); renderAll(); break;
+    case 'pinBack': S.loginUser = null; S.pin = ''; S.loginMsg = ''; renderAll(); break;
+    case 'signout': signOut(false); break;
+    case 'go': go(d.s, { tab: d.tab, filter: d.filter }); break;
+    case 'start': S.mode = d.mode; go('scan'); break;
+    case 'mode': S.mode = d.mode; refresh(); break;
+    case 'cam': if (cam) stopCam(); else startCam(); break;
+    case 'lookup': lookup(($('code') || {}).value); break;
+    case 'qty': S.qty = Math.max(1, (parseInt(S.qty, 10) || 0) + parseInt(d.n, 10)); var qi = $('qtyin'); if (qi) qi.value = S.qty; fill('f-result', resultHtml()); break;
+    case 'cancelScan': S.scanned = null; S.code = ''; S.qty = 1; var ci = $('code'); if (ci) ci.value = ''; refresh(); break;
+    case 'confirm': confirmMove(); break;
+    case 'createReceive': createReceive(); break;
+    case 'dept': S.dept = d.v; refresh(); break;
+    case 'quick': quick(d.upc, parseInt(d.n, 10)); break;
+    case 'editProduct': openProduct(d.upc); break;
+    case 'newProduct': openProduct(null); break;
+    case 'saveProduct': saveProduct(); break;
+    case 'deleteProduct': deleteProduct(); break;
+    case 'ptab': S.panelTab = d.v; S.pform = S.vform = S.uform = null; S.setForm = null; S.confirmDel = false; if (d.v === 'users') loadUsers().then(soon); refresh(); break;
+    case 'closeForm': S.pform = S.vform = S.uform = null; S.confirmDel = false; refresh(); break;
+    case 'newVendor': S.vform = { id: null, name: '', contact: '', phone: '', days: '' }; S.confirmDel = false; refresh(); break;
+    case 'editVendor': var v = S.vendors.filter(function (x) { return x.id === d.id; })[0]; if (v) { S.vform = { id: v.id, name: v.name, contact: v.contact, phone: v.phone, days: v.days }; S.confirmDel = false; refresh(); } break;
+    case 'saveVendor': saveVendor(); break;
+    case 'deleteVendor': deleteVendor(); break;
+    case 'newUser': S.uform = { id: null, name: '', role: 'Receiver', pin: '' }; S.confirmDel = false; refresh(); break;
+    case 'editUser': var u = S.users.filter(function (x) { return x.id === d.id; })[0]; if (u) { S.uform = { id: u.id, name: u.name, role: u.role, pin: '' }; S.confirmDel = false; refresh(); } break;
+    case 'saveUser': saveUser(); break;
+    case 'deleteUser': deleteUser(); break;
+    case 'saveSettings': saveSettings(); break;
+    case 'logf': S.logFilter = d.v; refresh(); break;
+    case 'moreLog': loadMoves(true).then(refresh).catch(function (er) { toast(errMsg(er), true); }); break;
+    case 'exportInv': exportInv(); break;
+    case 'exportLog': exportLog(); break;
+    case 'importCsv': $('csvFile').click(); break;
+  }
+  // panel forms swap the whole body; make sure it redraws even if a field had focus
+  if (['closeForm', 'newVendor', 'editVendor', 'newUser', 'editUser', 'ptab', 'newProduct', 'editProduct'].indexOf(a) >= 0) { var pb = $('f-pbody'); if (pb) pb.innerHTML = panelBody(); fill('f-ptabs', panelTabs()); }
+});
+
+function setPath(path, value) {
+  var parts = path.split('.');
+  if (parts.length === 1) { S[path] = value; return; }
+  if (S[parts[0]]) S[parts[0]][parts[1]] = value;
+}
+document.addEventListener('input', function (e) {
+  var el = e.target, k = el.getAttribute && el.getAttribute('data-bind'); if (!k) return;
+  setPath(k, el.value);
+  if (k === 'search') { fill('f-stocksum', stockSum()); var st = $('f-stock'); if (st) st.innerHTML = stockHtml(); }
+  if (k === 'adminQ') { var q = S.adminQ.trim().toLowerCase(); var al = $('f-adminlist'); if (al) al.innerHTML = adminRows(productList().filter(function (p) { return !q || (p.name + ' ' + p.upc).toLowerCase().indexOf(q) >= 0; })); }
+  if (k === 'qty') { var n = parseInt(digits(el.value), 10); S.qty = isNaN(n) ? '' : n; }
+});
+document.addEventListener('change', function (e) {
+  var el = e.target;
+  if (el.id === 'csvFile') { if (el.files && el.files[0]) importCsv(el.files[0]); el.value = ''; return; }
+  var k = el.getAttribute && el.getAttribute('data-bind'); if (!k) return;
+  setPath(k, el.value);
+  if (k === 'vendor') { el.className = 'inp ' + (S.vendor ? 'set' : 'need'); }
+  if (k === 'newP.unit') { el.blur(); fill('f-result', resultHtml()); }
+  if (k === 'qty') { if (!S.qty || S.qty < 1) S.qty = 1; el.value = S.qty; }
+});
+document.addEventListener('keydown', function (e) {
+  if (e.target && e.target.id === 'code' && e.key === 'Enter') { e.preventDefault(); lookup(e.target.value); }
+});
+
+// Bluetooth / USB scanners type fast and end with Enter. Catch them anywhere on the Scan screen.
+var wedge = '', wedgeT = 0;
+document.addEventListener('keydown', function (e) {
+  if (!S.me || isField(document.activeElement)) return;
+  if (e.key >= '0' && e.key <= '9') {
+    var now = Date.now(); if (now - wedgeT > 80) wedge = ''; wedgeT = now; wedge += e.key; return;
+  }
+  if (e.key === 'Enter' && wedge.length >= 6 && Date.now() - wedgeT < 120) {
+    var c = wedge; wedge = '';
+    if (S.screen !== 'scan') { go('scan'); }
+    lookup(c);
+  }
+});
+
+/* ---------- boot ---------- */
+(function boot() {
+  var saved = null; try { saved = localStorage.getItem('kf_token'); } catch (e) {}
+  renderAll();
+  loadSettings().catch(function () {}).then(function () {
+    if (!saved) return loadUsers().then(renderAll);
+    return sb.rpc('kf_session', { p_token: saved }).then(function (r) {
+      if (r.error || !r.data) { try { localStorage.removeItem('kf_token'); } catch (e) {} return loadUsers().then(renderAll); }
+      S.token = saved; S.me = r.data; renderAll();
+      return loadAll().then(function () { subscribe(); renderAll(); });
+    });
+  }).catch(function (e) { S.loginMsg = errMsg(e); renderAll(); });
+})();
+
+})();
+</script>
+</body>
+</html>
