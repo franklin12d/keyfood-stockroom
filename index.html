@@ -196,6 +196,32 @@ textarea.inp{padding:10px 12px;min-height:150px;resize:vertical;line-height:1.4}
 .lightbox{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:calc(env(safe-area-inset-top,0px) + 56px) 12px calc(env(safe-area-inset-bottom,0px) + 16px)}
 .lightbox img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
 .lightbox .lbbar{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);left:12px;right:12px;display:flex;justify-content:space-between;gap:8px}
+.gear{width:40px;height:40px;flex:none;border-radius:999px;border:1px solid #3B4F45;background:#23342C;color:#fff;display:flex;align-items:center;justify-content:center}
+.gear.on{background:var(--green);border-color:var(--green)}
+.topr{display:flex;align-items:center;gap:8px;flex:none}
+.who span{max-width:96px}
+.phbtns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.phbtn{min-height:52px;border-radius:12px;border:1px solid var(--field);background:var(--card);color:var(--green-ink);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px}
+.phbtn.main{background:var(--green);color:#fff;border-color:var(--green)}
+.daylbl{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:6px 2px -4px}
+.ocard{width:100%;display:flex;gap:12px;align-items:stretch;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px;text-align:left}
+.ocover{width:84px;height:84px;flex:none;border-radius:10px;overflow:hidden;background:var(--green-soft);color:var(--green-ink);display:flex;align-items:center;justify-content:center}
+.ocover img{width:100%;height:100%;object-fit:cover;display:block}
+.obody{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;justify-content:center}
+.obody b{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ochips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.ochips span{background:var(--soft);border-radius:999px;padding:2px 8px;font-size:12px;font-weight:600;color:var(--ink)}
+.shooter{position:fixed;inset:0;z-index:40;background:#000;display:flex;flex-direction:column}
+.shooter video{flex:1;width:100%;min-height:0;object-fit:cover;background:#000}
+.shotTop{position:absolute;top:0;left:0;right:0;padding:calc(env(safe-area-inset-top,0px) + 12px) 14px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;color:#fff;font-size:14px;font-weight:600;background:linear-gradient(rgba(0,0,0,.6),transparent)}
+.shotBar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px calc(env(safe-area-inset-bottom,0px) + 18px);background:#000}
+.shutter{width:76px;height:76px;border-radius:999px;border:5px solid #fff;background:#fff;box-shadow:inset 0 0 0 4px #000}
+.shutter:active{transform:scale(.94)}
+.shotStrip{display:flex;gap:6px;min-width:88px;justify-content:flex-end}
+.shotStrip img{width:40px;height:40px;object-fit:cover;border-radius:6px;border:2px solid #fff}
+.shotFlash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s}
+.shotFlash.on{opacity:.8;transition:none}
+.shotBtn{min-height:40px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.6);background:rgba(0,0,0,.35);color:#fff;font-weight:700;font-size:14px}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));width:min(528px,calc(100% - 32px));background:var(--ink);color:#fff;border-radius:12px;padding:12px 14px;font-size:14px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:20;display:none}
 #toast.show{display:block}
 #toast.bad{background:var(--red)}
@@ -230,7 +256,7 @@ var S = {
   search: '', dept: 'All', adminQ: '', panelTab: 'products',
   pform: null, vform: null, uform: null, setForm: null, confirmDel: false,
   logFilter: 'all', session: [], busy: false, pending: {}, live: false,
-  delivery: null, photosLocal: [], histTab: 'moves', deliveries: [], openDel: null, lightbox: null
+  delivery: null, photosLocal: [], deliveries: [], covers: {}, ordersQ: '', ordersLoaded: false, openDel: null, lightbox: null, pickTarget: null
 };
 try { S.delivery = JSON.parse(localStorage.getItem('kf_delivery') || 'null'); } catch (e) {}
 if (S.delivery) { S.vendor = S.delivery.vendor || ''; S.ref = S.delivery.ref || ''; }
@@ -356,6 +382,7 @@ function subscribe() {
       var m = p.new; if (!m) return;
       if (!S.moves.some(function (x) { return x.id === m.id; })) S.moves.unshift(m);
       if (m.type === 'in' && new Date(m.at) >= startOfDay()) S.todayIn += m.delta;
+      if (S.screen === 'orders' && !S.openDel && m.delivery_id) { clearTimeout(window.__oT); window.__oT = setTimeout(function () { loadOrders().catch(function () {}); }, 1500); }
       soon();
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'kf_vendors' }, function () { loadVendors().then(soon); })
@@ -364,6 +391,7 @@ function subscribe() {
 // safety net: full refresh every 2 minutes and when the app comes back to the foreground
 setInterval(function () { if (S.me && !document.hidden) Promise.all([loadProducts(), loadVendors()]).then(soon).catch(function () {}); }, 120000);
 document.addEventListener('visibilitychange', function () {
+  if (document.hidden && $('shooter')) closeShooter();
   if (!document.hidden && S.me) loadAll().then(soon).catch(function () {});
 });
 window.addEventListener('online', function () { soon(); if (S.me) loadAll().then(soon).catch(function () {}); });
@@ -375,6 +403,7 @@ function signOut(expired) {
   S.token = null; S.me = null; S.loginUser = null; S.pin = '';
   S.loginMsg = expired ? 'Session ended. Sign in again.' : '';
   S.lightbox = null; S.openDel = null;
+  if ($('shooter')) closeShooter();
   try { localStorage.removeItem('kf_token'); } catch (e) {}
   stopCam();
   if (t && !expired) sb.rpc('kf_logout', { p_token: t });
@@ -406,6 +435,8 @@ var IC = {
   up: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9"/><path d="M7 14l5-5 5 5"/><path d="M4 3h16"/></svg>',
   plus: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>',
   minus: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>',
+  truck: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 6h11v10H2z"/><path d="M13 9h4l4 4v3h-8"/><circle cx="6" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/></svg>',
+  gallery: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg>',
   cam: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
   pen: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>'
 };
@@ -447,7 +478,8 @@ function renderAll() {
   var store = S.settings.store || 'Key Food';
   app.innerHTML =
     '<header class="top"><div class="brand"><img class="logo" src="' + LOGO + '" alt="Key Food"><div class="bt"><b>STOCKROOM</b><span>' + esc(store) + '</span></div></div>' +
-    '<div class="who"><span>' + esc(S.me.name) + '</span><button type="button" data-act="signout">Switch</button></div></header>' +
+    '<div class="topr"><button type="button" class="gear' + (S.screen === 'panel' ? ' on' : '') + '" id="gearBtn" data-act="go" data-s="panel" aria-label="Control panel">' + IC.panel + '</button>' +
+    '<div class="who"><span>' + esc(S.me.name) + '</span><button type="button" data-act="signout">Switch</button></div></div></header>' +
     '<div id="f-banner"></div>' +
     '<main id="main"></main>' +
     '<nav class="tabs" aria-label="Main navigation"><div class="in" id="f-nav"></div></nav><div id="f-lightbox"></div>';
@@ -457,7 +489,7 @@ function renderAll() {
 function renderScreen() {
   var main = $('main'); if (!main) return;
   if (S.screen !== 'scan') stopCam();
-  var v = { home: homeView, scan: scanView, stock: stockView, panel: panelView, log: logView }[S.screen] || homeView;
+  var v = { home: homeView, scan: scanView, stock: stockView, panel: panelView, log: logView, orders: ordersView }[S.screen] || homeView;
   main.innerHTML = v();
   refresh(true);
   if (S.screen === 'scan') { var c = $('code'); if (c && !('ontouchstart' in window)) c.focus(); }
@@ -467,17 +499,15 @@ function refresh() {
   if (!S.me) { if (!$('pinpad') && !$('people')) renderAll(); return; }
   fill('f-banner', !navigator.onLine ? '<div class="banner">You are offline. Changes will not save until the connection is back.</div>' : '');
   fill('f-nav', navView());
+  var gb = $('gearBtn'); if (gb) gb.className = 'gear' + (S.screen === 'panel' ? ' on' : '');
   fill('f-lightbox', lightboxHtml());
   var s = S.screen;
   if (s === 'home') { fill('f-kpis', kpisHtml()); fill('f-onboard', onboardHtml()); fill('f-low', lowHtml()); fill('f-recent', S.moves.slice(0, 5).map(moveRow).join('') || '<p class="empty">No activity yet.</p>'); }
   if (s === 'scan') { fill('f-seg', segHtml()); fill('f-vendor', vendorHtml()); fill('f-result', resultHtml()); fill('f-sess', sessionHtml()); }
   if (s === 'stock') { fill('f-chips', stockChips()); fill('f-stocksum', stockSum()); fill('f-stock', stockHtml()); }
   if (s === 'panel') { fill('f-ptabs', panelTabs()); fill('f-pbody', panelBody()); }
-  if (s === 'log') {
-    fill('f-htabs', histTabs());
-    fill('f-logchips', S.histTab === 'moves' ? logChips() : '');
-    fill('f-log', S.histTab === 'moves' ? logHtml() : deliveriesHtml());
-  }
+  if (s === 'log') { fill('f-logchips', logChips()); fill('f-log', logHtml()); }
+  if (s === 'orders') { fill('f-osearch', ordersSearch()); fill('f-orders', ordersHtml()); }
 }
 
 /* login */
@@ -504,7 +534,7 @@ function navView() {
   function b(s, label, icon) { return '<button type="button" class="tab' + (S.screen === s ? ' on' : '') + '" data-act="go" data-s="' + s + '">' + icon + label + '</button>'; }
   return b('home', 'Home', IC.home) + b('stock', 'Stock', IC.box) +
     '<button type="button" class="tab' + (S.screen === 'scan' ? ' on' : '') + '" data-act="go" data-s="scan" aria-label="Scan"><span class="fab">' + IC.scan + '</span>Scan</button>' +
-    b('panel', 'Panel', IC.panel) + b('log', 'History', IC.clock);
+    b('orders', 'Orders', IC.truck) + b('log', 'History', IC.clock);
 }
 
 /* home */
@@ -513,6 +543,7 @@ function homeView() {
     '<div id="f-onboard"></div><div class="grid2" id="f-kpis"></div>' +
     '<div class="grid2"><button type="button" class="big in" data-act="start" data-mode="in">' + IC.down + 'Receive</button><button type="button" class="big out" data-act="start" data-mode="out">' + IC.up + 'Pull to floor</button></div>' +
     '<section class="card"><div class="cardh"><h2>Needs restock</h2><button type="button" class="link" data-act="go" data-s="stock" data-filter="low">View all</button></div><div id="f-low"></div></section>' +
+    '<button type="button" class="btn ghost wide" style="display:flex;align-items:center;justify-content:center;gap:8px" data-act="go" data-s="orders">' + IC.truck + 'Orders received</button>' +
     '<section class="card"><div class="cardh"><h2>Recent activity</h2><button type="button" class="link" data-act="go" data-s="log">History</button></div><div id="f-recent"></div></section></div>';
 }
 function kpisHtml() {
@@ -566,12 +597,13 @@ function vendorHtml() {
 function deliveryBlock() {
   var local = S.photosLocal, d = S.delivery;
   var h = '<div class="cardh" style="margin-top:4px"><span style="font-size:13px;font-weight:700">Delivery photos</span><span class="t2">' +
-    (local.length ? local.length + ' added' : 'Invoice, packing slip, pallets, damage') + '</span></div><div class="photos">';
+    (local.length ? local.length + ' added' : 'Invoice, packing slip, pallets, damage') + '</span></div><div class="photos"' + (local.length ? '' : ' hidden') + '>';
   local.forEach(function (p, i) {
     h += '<button type="button" class="ph" data-act="viewLocal" data-i="' + i + '" aria-label="View photo ' + (i + 1) + '"><img src="' + esc(p.thumb) + '" alt="">' +
       (p.state === 'up' ? '<span class="st">Uploading…</span>' : p.state === 'err' ? '<span class="st" style="background:rgba(180,35,24,.75)">Failed</span>' : '') + '</button>';
   });
-  h += '<button type="button" class="addph" data-act="addPhoto"' + (S.vendor ? '' : ' disabled') + '>' + IC.cam + 'Add photo</button></div>';
+  h += '</div><div class="phbtns"><button type="button" class="phbtn main" data-act="shoot"' + (S.vendor ? '' : ' disabled') + '>' + IC.cam + 'Take photo</button>' +
+    '<button type="button" class="phbtn" data-act="addPhoto"' + (S.vendor ? '' : ' disabled') + '>' + IC.gallery + 'From gallery</button></div>';
   if (!S.vendor) h += '<span class="t2">Select the vendor first, then add photos.</span>';
   if (d) {
     var lines = S.moves.filter(function (m) { return m.delivery_id === d.id; });
@@ -775,12 +807,54 @@ function settingsTab() {
 
 /* history */
 function logView() {
-  return '<div class="stack"><h1>History</h1><div class="seg" id="f-htabs"></div><div class="chips" id="f-logchips"></div><div id="f-log"></div></div>';
+  return '<div class="stack"><h1>History</h1><div class="chips" id="f-logchips"></div><div id="f-log"></div></div>';
 }
-function histTabs() {
-  return [['moves', 'Moves'], ['deliveries', 'Deliveries']].map(function (x) {
-    return '<button type="button" class="' + (S.histTab === x[0] ? 'on' : '') + '" data-act="htab" data-v="' + x[0] + '">' + x[1] + '</button>';
-  }).join('');
+function ordersView() {
+  return '<div class="stack"><div><h1>Orders Received</h1><p class="sub">Every delivery with its items, receivers and photos.</p></div>' +
+    '<div id="f-osearch"></div><div class="stack" id="f-orders" style="gap:10px"></div></div>';
+}
+function ordersSearch() {
+  if (S.openDel) return '';
+  return '<input class="inp" data-bind="ordersQ" placeholder="Search vendor or invoice" aria-label="Search orders" value="' + esc(S.ordersQ) + '" autocomplete="off">';
+}
+function dayLabel(ts) {
+  var d = new Date(ts), t = startOfDay(), y = new Date(t); y.setDate(y.getDate() - 1);
+  if (d >= t) return 'Today'; if (d >= y) return 'Yesterday';
+  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+}
+function ordersHtml() {
+  if (S.openDel) return deliveryDetail();
+  if (!S.ordersLoaded) return '<p class="empty">Loading orders…</p>';
+  var q = S.ordersQ.trim().toLowerCase();
+  var list = S.deliveries.filter(function (d) { return !q || (d.vendor + ' ' + d.ref).toLowerCase().indexOf(q) >= 0; });
+  if (!S.deliveries.length) return '<p class="empty">No orders received yet. Each delivery you receive in Scan shows up here as a card.</p>';
+  if (!list.length) return '<p class="empty">No orders match.</p>';
+  var h = '', last = '';
+  list.forEach(function (d) {
+    var lbl = dayLabel(d.started_at); if (lbl !== last) { h += '<div class="daylbl">' + esc(lbl) + '</div>'; last = lbl; }
+    var cov = S.covers[d.id];
+    h += '<button type="button" class="ocard" data-act="openDel" data-id="' + esc(d.id) + '">' +
+      '<span class="ocover">' + (cov ? '<img src="' + esc(cov) + '" alt="" loading="lazy">' : IC.truck) + '</span>' +
+      '<span class="obody"><b>' + esc(d.vendor) + '</b>' +
+      '<span class="t2">' + (d.ref ? 'Invoice / PO ' + esc(d.ref) : 'No invoice number') + '</span>' +
+      '<span class="t2b">' + esc(d.user_name) + ' · ' + esc(new Date(d.started_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })) + '</span>' +
+      '<span class="ochips"><span>' + d.lines + ' items</span><span>' + fmtNum(d.units) + ' units</span><span>' + d.photos + (d.photos === 1 ? ' photo' : ' photos') + '</span></span></span></button>';
+  });
+  return h;
+}
+function loadOrders() {
+  return loadDeliveries().then(function () {
+    S.ordersLoaded = true; refresh();
+    var ids = S.deliveries.filter(function (d) { return d.photos; }).map(function (d) { return d.id; });
+    if (!ids.length) return;
+    return photoApi({ action: 'covers', delivery_ids: ids }).then(function (j) { S.covers = j.covers || {}; refresh(); });
+  });
+}
+function exportOrder() {
+  var o = S.openDel; if (!o || !o.moves) return;
+  var d = o.d, rows = [['order_vendor', 'invoice_po', 'order_started', 'date_time', 'upc', 'product', 'units', 'received_by']];
+  o.moves.forEach(function (m) { rows.push([d.vendor, d.ref, new Date(d.started_at).toLocaleString('en-US'), new Date(m.at).toLocaleString('en-US'), m.upc, m.name, m.delta, m.user_name]); });
+  download('order-' + d.vendor.replace(/[^a-z0-9]+/gi, '-').toLowerCase() + '-' + stamp() + '.csv', rows.map(function (r) { return r.map(csvCell).join(','); }).join('\n'));
 }
 function loadDeliveries() {
   return sb.from('kf_deliveries').select('*').order('started_at', { ascending: false }).limit(60).then(function (r) {
@@ -824,15 +898,24 @@ function deliveryDetail() {
   var units = mv.reduce(function (a, m) { return a + m.delta; }, 0);
   var mins = mv.length > 1 ? Math.max(1, Math.round((new Date(mv[mv.length - 1].at) - new Date(mv[0].at)) / 60000)) : 0;
   var people = mv.map(function (m) { return m.user_name; }).filter(function (v, i, a) { return a.indexOf(v) === i; });
-  var h = '<div class="stack"><button type="button" class="link" style="align-self:flex-start" data-act="closeDel">‹ All deliveries</button>' +
-    '<div><h1 style="font-size:26px">' + esc(d.vendor) + '</h1><p class="sub">' + (d.ref ? 'Invoice / PO ' + esc(d.ref) + ' · ' : '') + esc(fmtWhen(d.started_at)) + '</p>' +
-    '<p class="sub">Received by ' + esc(people.length ? people.join(', ') : d.user_name) + '</p></div>' +
+  var vend = S.vendors.filter(function (v) { return v.name === d.vendor; })[0];
+  var first = mv.length ? mv[0].at : d.started_at, lastAt = mv.length ? mv[mv.length - 1].at : null;
+  var h = '<div class="stack"><button type="button" class="link" style="align-self:flex-start" data-act="closeDel">‹ All orders</button>' +
+    '<div><h1 style="font-size:26px">' + esc(d.vendor) + '</h1><p class="sub">' + (d.ref ? 'Invoice / PO ' + esc(d.ref) : 'No invoice number') + '</p>' +
+    '<p class="sub">Started ' + esc(fmtWhen(first)) + (lastAt && mins ? ' · last scan ' + esc(new Date(lastAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })) : '') + '</p>' +
+    '<p class="sub">Received by ' + esc(people.length ? people.join(', ') : d.user_name) + '</p>' +
+    (vend && (vend.contact || vend.phone) ? '<p class="sub">Vendor contact: ' + esc(vend.contact || '') + (vend.phone ? ' · <a href="tel:' + esc(vend.phone.replace(/[^0-9+]/g, '')) + '">' + esc(vend.phone) + '</a>' : '') + '</p>' : '') + '</div>' +
     '<div class="dstats"><div><b>' + (o.moves ? items.length : '…') + '</b><span>Products</span></div><div><b>' + (o.moves ? fmtNum(units) : '…') + '</b><span>Units</span></div>' +
     '<div><b>' + (o.photos ? o.photos.length : '…') + '</b><span>Photos</span></div><div><b>' + (mins ? mins + 'm' : '—') + '</b><span>Time</span></div></div>' +
-    '<section class="card"><h2>Photos</h2>';
+    '<section class="card"><div class="cardh"><h2>Photos</h2><span class="t2">' + (o.photos ? o.photos.length : '') + '</span></div>';
+  var pend = o.pending || [];
   if (!o.photos) h += '<p class="empty">Loading photos…</p>';
-  else if (!o.photos.length) h += '<p class="empty">No photos for this delivery.</p>';
-  else h += '<div class="photos">' + o.photos.map(function (p, i) { return '<button type="button" class="ph" data-act="viewPhoto" data-i="' + i + '" aria-label="Open photo ' + (i + 1) + '"><img src="' + esc(p.url) + '" alt="" loading="lazy"></button>'; }).join('') + '</div>';
+  else if (!o.photos.length && !pend.length) h += '<p class="empty">No photos for this order yet.</p>';
+  if (o.photos && (o.photos.length || pend.length)) {
+    h += '<div class="photos">' + o.photos.map(function (p, i) { return '<button type="button" class="ph" data-act="viewPhoto" data-i="' + i + '" aria-label="Open photo ' + (i + 1) + '"><img src="' + esc(p.url) + '" alt="" loading="lazy"></button>'; }).join('') +
+      pend.map(function (p) { return '<span class="ph"><img src="' + esc(p.thumb) + '" alt=""><span class="st"' + (p.state === 'err' ? ' style="background:rgba(180,35,24,.75)"' : '') + '>' + (p.state === 'err' ? 'Failed' : 'Uploading…') + '</span></span>'; }).join('') + '</div>';
+  }
+  h += '<div class="phbtns"><button type="button" class="phbtn main" data-act="shootOrder">' + IC.cam + 'Take photo</button><button type="button" class="phbtn" data-act="galleryOrder">' + IC.gallery + 'From gallery</button></div>';
   h += '</section><section class="card"><h2>What was received</h2>';
   if (!o.moves) h += '<p class="empty">Loading…</p>';
   else if (!items.length) h += '<p class="empty">Only photos, no items scanned.</p>';
@@ -840,7 +923,13 @@ function deliveryDetail() {
     var p = S.products.get(it.upc);
     h += '<div class="row"><div class="grow"><span class="t1">' + esc(it.name) + '</span><span class="t2"><span class="mono">' + esc(it.upc) + '</span>' + (p ? ' · on hand now ' + p.qty : '') + '</span></div><span class="num c-in" style="font-size:20px">+' + it.units + '</span></div>';
   });
-  return h + '</section></div>';
+  h += '</section>';
+  if (mv.length) {
+    h += '<section class="card"><h2>Scan log</h2>' + mv.map(function (m) {
+      return '<div class="row"><div class="grow"><span class="t1">' + esc(m.name) + '</span><span class="t2">' + esc(m.user_name) + ' · ' + esc(new Date(m.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })) + (m.reason && m.reason !== 'Receiving' ? ' · ' + esc(m.reason) : '') + '</span></div><span class="num c-in" style="font-size:18px">+' + m.delta + '</span></div>';
+    }).join('') + '</section><button type="button" class="btn ghost wide" data-act="exportOrder">Download this order (CSV)</button>';
+  }
+  return h + '</div>';
 }
 function lightboxHtml() {
   var lb = S.lightbox; if (!lb) return '';
@@ -866,6 +955,7 @@ function go(screen, opts) {
   if (opts.tab) { S.panelTab = opts.tab; S.pform = S.vform = S.uform = null; }
   if (screen === 'stock' && opts.filter === 'low') S.dept = '__low';
   if (screen === 'panel') { if (S.panelTab === 'users') loadUsers().then(soon); }
+  if (screen === 'orders') { S.openDel = null; loadOrders().catch(function (er) { S.ordersLoaded = true; toast(errMsg(er), true); refresh(); }); }
   renderScreen(); window.scrollTo(0, 0);
 }
 function lookup(raw) {
@@ -930,19 +1020,83 @@ function blobToB64(blob) {
   });
 }
 var photoQueue = Promise.resolve();
-function addPhotos(files) {
-  if (!S.vendor) { toast('Select the vendor for this delivery first.', true); return; }
-  Array.prototype.forEach.call(files, function (f) {
-    var item = { thumb: URL.createObjectURL(f), state: 'up', url: null };
-    S.photosLocal.push(item); refresh();
-    photoQueue = photoQueue.then(function () {
-      return ensureDelivery().then(function (id) {
-        return compressPhoto(f).then(blobToB64).then(function (b64) { return photoApi({ action: 'upload', delivery_id: id, type: 'image/jpeg', data: b64 }); });
-      }).then(function (res) { item.state = 'ok'; item.url = res.url; item.id = res.id; toast('Photo saved to this delivery'); })
-        .catch(function (e) { item.state = 'err'; toast(errMsg(e), true); })
-        .then(refresh);
-    });
+// target: null = the delivery being received now; a delivery id = an order already received
+function uploadPhoto(source, target, isBlob) {
+  var item = { thumb: URL.createObjectURL(source), state: 'up', url: null, id: null };
+  if (!target) S.photosLocal.push(item);
+  else if (S.openDel && S.openDel.d.id === target) S.openDel.pending = (S.openDel.pending || []).concat([item]);
+  refresh();
+  photoQueue = photoQueue.then(function () {
+    return (target ? Promise.resolve(target) : ensureDelivery()).then(function (id) {
+      return (isBlob ? Promise.resolve(source) : compressPhoto(source)).then(blobToB64).then(function (b64) {
+        return photoApi({ action: 'upload', delivery_id: id, type: 'image/jpeg', data: b64 });
+      });
+    }).then(function (res) {
+      item.state = 'ok'; item.url = res.url; item.id = res.id;
+      if (target && S.openDel && S.openDel.d.id === target) {
+        S.openDel.pending = (S.openDel.pending || []).filter(function (x) { return x !== item; });
+        S.openDel.photos = (S.openDel.photos || []).concat([{ id: res.id, url: res.url, at: res.at, user_name: S.me.name }]);
+        S.openDel.d.photos = (S.openDel.d.photos || 0) + 1;
+        if (!S.covers[target]) S.covers[target] = res.url;
+      }
+      if (!$('shooter')) toast('Photo saved');
+    }).catch(function (e) { item.state = 'err'; toast(errMsg(e), true); }).then(refresh);
   });
+}
+function addPhotos(files, target) {
+  if (!target && !S.vendor) { toast('Select the vendor for this delivery first.', true); return; }
+  Array.prototype.forEach.call(files, function (f) { uploadPhoto(f, target, false); });
+}
+
+/* ---------- in-app camera ---------- */
+var shot = { stream: null, target: null, torch: false, taken: [] };
+function openShooter(target) {
+  if (!target && !S.vendor) { toast('Select the vendor for this delivery first.', true); return; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('This browser cannot open the camera inside the app. Use From gallery.', true); return; }
+  stopCam();
+  shot.target = target || null; shot.torch = false; shot.taken = [];
+  var label = target && S.openDel ? S.openDel.d.vendor : S.vendor;
+  var m = document.createElement('div'); m.id = 'shooter'; m.className = 'shooter'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-label', 'Camera');
+  m.innerHTML = '<video id="shotVideo" playsinline muted autoplay></video><div class="shotFlash" id="shotFlash"></div>' +
+    '<div class="shotTop"><span>' + esc('Photos for ' + label) + '</span><button type="button" class="shotBtn" id="shotTorch" data-act="shotTorch" hidden>Light</button></div>' +
+    '<div class="shotBar"><button type="button" class="shotBtn" data-act="shotClose">Done</button>' +
+    '<button type="button" class="shutter" data-act="shotTake" aria-label="Take photo"></button><div class="shotStrip" id="shotStrip"></div></div>';
+  document.body.appendChild(m);
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1440 } }, audio: false })
+    .then(function (st) {
+      if (!$('shooter')) { st.getTracks().forEach(function (t) { t.stop(); }); return; }
+      shot.stream = st; var v = $('shotVideo'); v.srcObject = st; var pl = v.play(); if (pl && pl.catch) pl.catch(function () {});
+      var tr = st.getVideoTracks()[0], caps = tr && tr.getCapabilities ? tr.getCapabilities() : {};
+      if (caps && caps.torch) $('shotTorch').hidden = false;
+    })
+    .catch(function () { closeShooter(); toast('Allow camera access in your browser settings, or use From gallery.', true); });
+}
+function closeShooter() {
+  if (shot.stream) shot.stream.getTracks().forEach(function (t) { t.stop(); });
+  shot.stream = null;
+  var m = $('shooter'); if (m) m.remove();
+  if (shot.taken.length) toast(shot.taken.length + (shot.taken.length === 1 ? ' photo' : ' photos') + ' added');
+  refresh();
+}
+function takeShot() {
+  var v = $('shotVideo'); if (!v || !v.videoWidth) return;
+  var max = 1600, w = v.videoWidth, h = v.videoHeight, k = Math.min(1, max / Math.max(w, h));
+  var c = document.createElement('canvas'); c.width = Math.round(w * k); c.height = Math.round(h * k);
+  c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+  var f = $('shotFlash'); if (f) { f.classList.add('on'); setTimeout(function () { f.classList.remove('on'); }, 60); }
+  beep();
+  c.toBlob(function (b) {
+    if (!b) { toast('Could not take that photo. Try again.', true); return; }
+    shot.taken.push(b); uploadPhoto(b, shot.target, true);
+    var strip = $('shotStrip');
+    if (strip) { var im = document.createElement('img'); im.alt = ''; im.src = URL.createObjectURL(b); strip.insertBefore(im, strip.firstChild); while (strip.children.length > 2) strip.removeChild(strip.lastChild); }
+  }, 'image/jpeg', 0.82);
+}
+function toggleTorch() {
+  var tr = shot.stream && shot.stream.getVideoTracks()[0]; if (!tr) return;
+  shot.torch = !shot.torch;
+  tr.applyConstraints({ advanced: [{ torch: shot.torch }] }).catch(function () {});
+  var b = $('shotTorch'); if (b) b.textContent = shot.torch ? 'Light on' : 'Light';
 }
 function finishDelivery() {
   var d = S.delivery; if (!d) return;
@@ -1235,10 +1389,16 @@ document.addEventListener('click', function (e) {
     case 'exportInv': exportInv(); break;
     case 'exportLog': exportLog(); break;
     case 'importCsv': $('csvFile').click(); break;
-    case 'addPhoto': if (!S.vendor) { toast('Select the vendor for this delivery first.', true); break; } $('photoFile').click(); break;
+    case 'addPhoto': if (!S.vendor) { toast('Select the vendor for this delivery first.', true); break; } S.pickTarget = null; $('photoFile').click(); break;
     case 'finishDelivery': finishDelivery(); break;
     case 'viewLocal': var lp = S.photosLocal[parseInt(d.i, 10)]; if (lp) { S.lightbox = { url: lp.url || lp.thumb, id: lp.id || null, local: true }; S.confirmDel = false; refresh(); } break;
-    case 'htab': S.histTab = d.v; S.openDel = null; if (d.v === 'deliveries') { fill('f-log', '<p class="empty">Loading deliveries…</p>'); loadDeliveries().then(refresh).catch(function (er) { toast(errMsg(er), true); }); } refresh(); break;
+    case 'shoot': openShooter(null); break;
+    case 'shootOrder': if (S.openDel) openShooter(S.openDel.d.id); break;
+    case 'galleryOrder': if (S.openDel) { S.pickTarget = S.openDel.d.id; $('photoFile').click(); } break;
+    case 'shotTake': takeShot(); break;
+    case 'shotClose': closeShooter(); break;
+    case 'shotTorch': toggleTorch(); break;
+    case 'exportOrder': exportOrder(); break;
     case 'openDel': openDelivery(d.id); break;
     case 'closeDel': S.openDel = null; refresh(); break;
     case 'viewPhoto': var vp = S.openDel && S.openDel.photos && S.openDel.photos[parseInt(d.i, 10)]; if (vp) { S.lightbox = { url: vp.url, id: vp.id }; S.confirmDel = false; refresh(); } break;
@@ -1270,10 +1430,11 @@ document.addEventListener('input', function (e) {
   if (k === 'search') { fill('f-stocksum', stockSum()); var st = $('f-stock'); if (st) st.innerHTML = stockHtml(); }
   if (k === 'adminQ') { var q = S.adminQ.trim().toLowerCase(); var al = $('f-adminlist'); if (al) al.innerHTML = adminRows(productList().filter(function (p) { return !q || (p.name + ' ' + p.upc).toLowerCase().indexOf(q) >= 0; })); }
   if (k === 'qty') { var n = parseInt(digits(el.value), 10); S.qty = isNaN(n) ? '' : n; }
+  if (k === 'ordersQ') { var of = $('f-orders'); if (of) of.innerHTML = ordersHtml(); }
 });
 document.addEventListener('change', function (e) {
   var el = e.target;
-  if (el.id === 'photoFile') { if (el.files && el.files.length) addPhotos(el.files); el.value = ''; return; }
+  if (el.id === 'photoFile') { if (el.files && el.files.length) addPhotos(el.files, S.pickTarget); S.pickTarget = null; el.value = ''; return; }
   if (el.id === 'csvFile') { if (el.files && el.files[0]) importCsv(el.files[0]); el.value = ''; return; }
   var k = el.getAttribute && el.getAttribute('data-bind'); if (!k) return;
   setPath(k, el.value);
@@ -1282,6 +1443,7 @@ document.addEventListener('change', function (e) {
   if (k === 'qty') { if (!S.qty || S.qty < 1) S.qty = 1; el.value = S.qty; }
 });
 document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && $('shooter')) { closeShooter(); return; }
   if (e.key === 'Escape' && S.lightbox) { S.lightbox = null; refresh(); return; }
   if (e.target && e.target.id === 'code' && e.key === 'Enter') { e.preventDefault(); lookup(e.target.value); }
 });
