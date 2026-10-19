@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#12201A">
+<meta name="app-version" content="8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Stockroom">
@@ -12,7 +13,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500&display=swap">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
 :root{
   --bg:#EEF1EF; --card:#FFFFFF; --ink:#12201A; --muted:#4A5852; --line:#D5DCD8; --field:#B7C2BC; --soft:#F4F6F5; --track:#DCE2DF;
@@ -120,22 +120,23 @@ textarea.inp{padding:10px 12px;min-height:150px;resize:vertical;line-height:1.4}
 .vendorbox select{border-width:2px;font-weight:600}
 .vendorbox select.need{border-color:var(--amber)}
 .vendorbox select.set{border-color:var(--green)}
-.finder{position:relative;height:210px;border-radius:16px;background:#0B1410;overflow:hidden}
+.finder{position:relative;height:270px;border-radius:16px;background:#0B1410;overflow:hidden;touch-action:manipulation}
 #reader{position:absolute;inset:0}
-#reader video{width:100%!important;height:100%!important;object-fit:cover}
-#reader img,#reader__dashboard,#reader__header_message{display:none!important}
-.corner{position:absolute;width:30px;height:30px;border:4px solid #fff;z-index:2}
-.c1{left:24px;top:22px;border-right:0;border-bottom:0;border-radius:6px 0 0 0}
-.c2{right:24px;top:22px;border-left:0;border-bottom:0;border-radius:0 6px 0 0}
-.c3{left:24px;bottom:22px;border-right:0;border-top:0;border-radius:0 0 0 6px}
-.c4{right:24px;bottom:22px;border-left:0;border-top:0;border-radius:0 0 6px 0}
-.sweep{position:absolute;left:36px;right:36px;height:2px;background:#FF7A3D;box-shadow:0 0 12px #FF7A3D;z-index:2;animation:sweep 2.4s ease-in-out infinite;display:none}
-.finder.live .sweep{display:block}
-@keyframes sweep{0%{top:20%}50%{top:78%}100%{top:20%}}
+#reader video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.guide{position:absolute;left:6%;right:6%;top:26%;bottom:26%;border:3px solid rgba(255,255,255,.95);border-radius:12px;z-index:2;display:none;box-shadow:0 0 0 999px rgba(0,0,0,.38);transition:border-color .15s}
+.finder.live .guide{display:block}
+.guide.hit{border-color:#3DDC84}
+.sweep{position:absolute;left:4%;right:4%;height:2px;background:#FF7A3D;box-shadow:0 0 12px #FF7A3D;animation:sweep 2s ease-in-out infinite}
+@keyframes sweep{0%{top:12%}50%{top:86%}100%{top:12%}}
 @media (prefers-reduced-motion:reduce){.sweep{animation:none;top:50%}}
 .finder-ui{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#C9D6CF;font-size:13px;text-align:center;padding:0 40px}
-.finder.live .finder-ui{inset:auto 0 12px 0}
-.finder.live .finder-ui p{display:none}
+.finder.live .finder-ui{display:none}
+.camtop{position:absolute;top:8px;left:10px;right:10px;z-index:3;display:none;color:#fff;font-size:12px;font-weight:600;text-align:center;text-shadow:0 1px 3px #000}
+.finder.live .camtop{display:block}
+.camtools{position:absolute;left:8px;right:8px;bottom:8px;z-index:3;display:none;gap:6px;justify-content:center;flex-wrap:wrap}
+.finder.live .camtools{display:flex}
+.camtools button{min-height:38px;padding:0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.7);background:rgba(0,0,0,.5);color:#fff;font-weight:700;font-size:13px}
+.camtools button.on{background:#fff;color:#000}
 .camBtn{min-height:44px;padding:0 18px;border-radius:999px;border:1px solid #fff;background:rgba(255,255,255,.12);color:#fff;font-weight:700;font-size:14px}
 .inrow{display:flex;gap:8px}
 .inrow .inp{flex:1;min-width:0;font-family:var(--mono)}
@@ -249,6 +250,10 @@ textarea.inp{padding:10px 12px;min-height:150px;resize:vertical;line-height:1.4}
 input[type=date].inp{padding:0 10px}
 .datebox{display:flex;gap:8px;align-items:flex-end}
 .datebox label{flex:1}
+.t-pend{background:#E9E4FF;color:#3D2A8C}
+.qbanner{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.qfail{background:var(--red-soft);color:var(--red-ink);border-bottom:1px solid #F1B7B1;padding:8px 16px;font-size:13px;font-weight:600}
+.qfail .row{padding:6px 0;border-top:1px solid #F1B7B1}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));width:min(528px,calc(100% - 32px));background:var(--ink);color:#fff;border-radius:12px;padding:12px 14px;font-size:14px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:20;display:none}
 #toast.show{display:block}
 #toast.bad{background:var(--red)}
@@ -283,7 +288,7 @@ var S = {
   search: '', dept: 'All', adminQ: '', panelTab: 'products',
   pform: null, vform: null, uform: null, setForm: null, confirmDel: false,
   logFilter: 'all', session: [], busy: false, pending: {}, live: false,
-  delivery: null, photosLocal: [], deliveries: [], covers: {}, ordersQ: '', ordersLoaded: false, openDel: null, lightbox: null, pickTarget: null, orderMoves: [], manual: false, manualQ: '', fix: null, packs: new Map(), imgDraft: null, imgUp: {}, expFilter: 'all', expIn: ''
+  delivery: null, photosLocal: [], deliveries: [], covers: {}, ordersQ: '', ordersLoaded: false, openDel: null, lightbox: null, pickTarget: null, orderMoves: [], manual: false, manualQ: '', fix: null, packs: new Map(), imgDraft: null, imgUp: {}, expFilter: 'all', expIn: '', queued: {}, showFailed: false
 };
 try { S.delivery = JSON.parse(localStorage.getItem('kf_delivery') || 'null'); } catch (e) {}
 if (S.delivery) { S.vendor = S.delivery.vendor || ''; S.ref = S.delivery.ref || ''; }
@@ -382,7 +387,8 @@ function loadProducts() {
     });
   }
   return page(0).then(function () {
-    var m = new Map(); all.forEach(function (p) { m.set(p.upc, p); }); S.products = m;
+    var m = new Map(); all.forEach(function (p) { m.set(p.upc, p); });
+    overlayQueued(m, null); S.products = m;
   });
 }
 function daysUntil(d) { if (!d) return null; return Math.round((new Date(d + 'T00:00:00') - startOfDay()) / 86400000); }
@@ -434,7 +440,8 @@ function expField(bind, val, label) {
 function loadPacks() {
   return sb.from('kf_packs').select('*').limit(20000).then(function (r) {
     if (r.error) throw r.error;
-    var m = new Map(); (r.data || []).forEach(function (k) { m.set(k.code, k); }); S.packs = m;
+    var m = new Map(); (r.data || []).forEach(function (k) { m.set(k.code, k); });
+    overlayQueued(null, m); S.packs = m;
   });
 }
 function packsFor(upc) {
@@ -452,6 +459,7 @@ function loadMoves(more) {
   return sb.from('kf_moves').select('*').order('at', { ascending: false }).range(from, from + 199).then(function (r) {
     if (r.error) throw r.error;
     S.moves = more ? S.moves.concat(r.data || []) : (r.data || []);
+    if (!more) syncPending();
     S.movesEnd = (r.data || []).length < 200;
   });
 }
@@ -462,7 +470,8 @@ function loadToday() {
   });
 }
 function loadAll() {
-  return Promise.all([loadUsers(), loadVendors(), loadSettings(), loadProducts(), loadMoves(false), loadToday(), loadOrderMoves(), loadPacks()]);
+  return Promise.all([loadUsers(), loadVendors(), loadSettings(), loadProducts(), loadMoves(false), loadToday(), loadOrderMoves(), loadPacks()])
+    .then(function () { syncPending(); saveCache(); flushQueue(); });
 }
 
 var channel = null;
@@ -489,10 +498,149 @@ function subscribe() {
 setInterval(function () { if (S.me && !document.hidden) Promise.all([loadProducts(), loadVendors()]).then(soon).catch(function () {}); }, 120000);
 document.addEventListener('visibilitychange', function () {
   if (document.hidden && $('shooter')) closeShooter();
+  if (document.hidden && cam) stopCam();
   if (!document.hidden && S.me) loadAll().then(soon).catch(function () {});
 });
 window.addEventListener('online', function () { soon(); if (S.me) loadAll().then(soon).catch(function () {}); });
 window.addEventListener('offline', soon);
+
+/* ---------- outbox: works with or without connection ---------- */
+var Q = { ops: [], failed: [], busy: false, blockedBy: '', timer: 0 };
+try { Q.ops = JSON.parse(localStorage.getItem('kf_queue') || '[]'); Q.failed = JSON.parse(localStorage.getItem('kf_failed') || '[]'); } catch (e) { Q.ops = []; Q.failed = []; }
+var waiters = {};
+function uuid() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) { var r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); });
+}
+function qSave() { try { localStorage.setItem('kf_queue', JSON.stringify(Q.ops)); localStorage.setItem('kf_failed', JSON.stringify(Q.failed.slice(-50))); } catch (e) {} }
+function recalcQueued() {
+  var m = {}; Q.ops.forEach(function (o) { if (o.fn === 'kf_move' && o.meta.delta) m[o.args.p_upc] = (m[o.args.p_upc] || 0) + o.meta.delta; });
+  S.queued = m;
+}
+// moves still on the phone show in lists right away, tagged "Pending"
+function syncPending() {
+  S.moves = S.moves.filter(function (m) { return !m.pending; });
+  S.orderMoves = S.orderMoves.filter(function (m) { return !m.pending; });
+  Q.ops.forEach(function (o) {
+    if (o.fn !== 'kf_move' || !o.meta.delta) return;
+    var a = o.args, pm = { id: 'q-' + o.id, pending: true, at: new Date(o.at).toISOString(), type: a.p_type, upc: a.p_upc, name: o.meta.name || a.p_upc,
+      delta: o.meta.delta, user_name: o.userName || '', reason: a.p_reason || '', vendor: a.p_vendor || '', ref: a.p_ref || '', delivery_id: a.p_delivery || null,
+      pack_code: a.p_pack_code || '', pack_qty: a.p_pack_qty || null, expires_on: a.p_expires || null };
+    S.moves.unshift(pm);
+    if (S.delivery && pm.delivery_id === S.delivery.id) S.orderMoves.push(pm);
+  });
+}
+function enqueue(fn, args, meta) {
+  var op = { id: uuid(), fn: fn, args: args, meta: meta || {}, at: Date.now(), token: S.token, userId: S.me && S.me.id, userName: S.me && S.me.name };
+  if (fn === 'kf_move') op.args.p_op_id = op.id;
+  Q.ops.push(op); qSave(); recalcQueued(); syncPending();
+  if (op.meta.session) S.session.unshift('q-' + op.id);
+  soon();
+  var answer = new Promise(function (res) { waiters[op.id] = res; });
+  flushQueue();
+  // never keep the person waiting on a slow or missing connection
+  var patience = new Promise(function (res) { setTimeout(function () { res({ ok: true, queued: true }); }, navigator.onLine ? 6000 : 0); });
+  return Promise.race([answer, patience]);
+}
+function isNetErr(e) {
+  var m = String((e && (e.message || e.details || e.hint)) || e || '');
+  return /Failed to fetch|NetworkError|Load failed|network|ERR_|timeout|fetch/i.test(m) && !/P0001|SESSION_EXPIRED/.test(m);
+}
+function qDone(op, data) {
+  Q.ops = Q.ops.filter(function (o) { return o.id !== op.id; });
+  if (op.fn === 'kf_move' && data && typeof data.qty === 'number') { var p = S.products.get(op.args.p_upc); if (p) p.qty = data.qty; }
+  if (op.meta.session && data && data.move_id) S.session = S.session.map(function (x) { return x === 'q-' + op.id ? data.move_id : x; });
+  qSave(); recalcQueued();
+  if (waiters[op.id]) { waiters[op.id](data || { ok: true }); delete waiters[op.id]; }
+}
+function qFail(op, msg) {
+  Q.ops = Q.ops.filter(function (o) { return o.id !== op.id; });
+  Q.failed.push({ label: op.meta.label || op.fn, msg: msg, at: Date.now(), user: op.userName || '' });
+  S.session = S.session.filter(function (x) { return x !== 'q-' + op.id; });
+  qSave(); recalcQueued();
+  if (waiters[op.id]) { waiters[op.id]({ ok: false, error: 'FAILED', message: msg }); delete waiters[op.id]; }
+}
+function flushQueue() {
+  if (Q.busy || !Q.ops.length || !navigator.onLine) return;
+  Q.busy = true; Q.blockedBy = ''; var sent = 0;
+  (function next() {
+    var op = Q.ops[0];
+    if (!op) { Q.busy = false; if (sent) afterDrain(); soon(); return; }
+    var args = Object.assign({}, op.args, { p_token: op.token });
+    sb.rpc(op.fn, args).then(function (r) {
+      if (r.error) {
+        var m = String(r.error.message || '');
+        if (m.indexOf('SESSION_EXPIRED') >= 0) {
+          // same person signed in again: send with the new session; otherwise wait for them
+          if (S.token && S.me && S.me.id === op.userId && op.token !== S.token) { op.token = S.token; qSave(); return next(); }
+          Q.busy = false; Q.blockedBy = op.userName || 'the person who saved them'; soon(); return;
+        }
+        if (isNetErr(r.error)) { Q.busy = false; retryLater(); return; }
+        if (op.meta.okIf && m.indexOf(op.meta.okIf) >= 0) { sent++; qDone(op, { ok: true }); return next(); }
+        sent++; qFail(op, errMsg(r.error)); return next();
+      }
+      var data = r.data;
+      if (data && data.ok === false && data.error === 'NOT_ENOUGH') { sent++; qFail(op, 'Not enough stock when it was sent (only ' + data.qty + ' on hand).'); return next(); }
+      sent++; qDone(op, data); next();
+    }, function () { Q.busy = false; retryLater(); });
+  })();
+}
+function retryLater() { clearTimeout(Q.timer); Q.timer = setTimeout(flushQueue, 8000); soon(); }
+function afterDrain() {
+  if (!S.me) return;
+  Promise.all([loadProducts(), loadMoves(false), loadOrderMoves(), loadToday(), loadPacks()]).then(function () { syncPending(); saveCache(); soon(); }).catch(function () {});
+}
+setInterval(function () { if (Q.ops.length) flushQueue(); }, 15000);
+window.addEventListener('online', function () { setTimeout(flushQueue, 800); });
+function sendMove(args, meta) {
+  args = Object.assign({ p_vendor: '', p_ref: '', p_absolute: null, p_delivery: null, p_pack_code: null, p_pack_qty: null, p_expires: null }, args);
+  return enqueue('kf_move', args, meta);
+}
+function queueBanner() {
+  var h = '', n = Q.ops.length;
+  if (n) {
+    var txt = !navigator.onLine ? 'Offline · ' + n + (n === 1 ? ' change is' : ' changes are') + ' saved on this phone and will send automatically.'
+      : Q.blockedBy ? n + (n === 1 ? ' change is' : ' changes are') + ' waiting for ' + Q.blockedBy + ' to sign in again on this phone.'
+      : 'Sending ' + n + ' saved ' + (n === 1 ? 'change' : 'changes') + '…';
+    h += '<div class="banner qbanner" style="background:#EFEBFF;color:#3D2A8C;border-color:#D6CCFF"><span>' + esc(txt) + '</span>' +
+      (navigator.onLine && !Q.blockedBy ? '' : '') + '</div>';
+  } else if (!navigator.onLine) {
+    h += '<div class="banner">Offline · you can keep scanning. Changes are saved on this phone.</div>';
+  }
+  if (Q.failed.length) {
+    h += '<div class="qfail"><div class="qbanner"><span>' + Q.failed.length + (Q.failed.length === 1 ? ' change' : ' changes') + ' could not be saved.</span>' +
+      '<span><button type="button" class="btn ghost sm" data-act="qShow">' + (S.showFailed ? 'Hide' : 'Review') + '</button> <button type="button" class="btn ghost sm" data-act="qClear">Dismiss</button></span></div>';
+    if (S.showFailed) h += Q.failed.slice(-10).reverse().map(function (f) { return '<div class="row"><div class="grow"><span class="t1">' + esc(f.label) + '</span><span class="t2">' + esc(f.msg) + ' · ' + esc(f.user) + ' · ' + esc(fmtWhen(f.at)) + '</span></div></div>'; }).join('');
+    h += '</div>';
+  }
+  return h;
+}
+
+/* ---------- offline copy of the catalog (so the app opens and scans with no signal) ---------- */
+// products and case barcodes created on the phone stay visible until the server has them
+function overlayQueued(prods, packs) {
+  Q.ops.forEach(function (o) {
+    var a = o.args;
+    if (prods && o.fn === 'kf_save_product' && !a.p_old_upc && !prods.has(a.p_upc)) prods.set(a.p_upc, { upc: a.p_upc, name: a.p_name, dept: a.p_dept, loc: a.p_loc || 'Unassigned', unit: a.p_unit, qty: 0, par: 0, image_url: '', expires_on: null });
+    if (packs && o.fn === 'kf_save_pack' && !packs.has(a.p_code)) packs.set(a.p_code, { code: a.p_code, upc: a.p_upc, size: a.p_size, label: a.p_label });
+  });
+}
+function saveCache() {
+  try {
+    localStorage.setItem('kf_cache', JSON.stringify({ at: Date.now(), me: S.me, products: Array.from(S.products.values()), packs: Array.from(S.packs.values()),
+      vendors: S.vendors, users: S.users, settings: S.settings, moves: S.moves.filter(function (m) { return !m.pending; }).slice(0, 100) }));
+  } catch (e) {}
+}
+function loadCache() {
+  try {
+    var c = JSON.parse(localStorage.getItem('kf_cache') || 'null'); if (!c) return false;
+    var m = new Map(); (c.products || []).forEach(function (p) { m.set(p.upc, p); });
+    var k = new Map(); (c.packs || []).forEach(function (x) { k.set(x.code, x); });
+    overlayQueued(m, k); S.products = m; S.packs = k;
+    S.vendors = c.vendors || []; S.users = c.users || []; if (c.settings) S.settings = c.settings; S.moves = c.moves || [];
+    S.cacheAt = c.at; return c;
+  } catch (e) { return false; }
+}
 
 /* ---------- session ---------- */
 function signOut(expired) {
@@ -503,7 +651,9 @@ function signOut(expired) {
   if ($('shooter')) closeShooter();
   try { localStorage.removeItem('kf_token'); } catch (e) {}
   stopCam();
-  if (t && !expired) sb.rpc('kf_logout', { p_token: t });
+  var mine = Q.ops.some(function (o) { return o.token === t; });
+  if (t && !expired && !mine) sb.rpc('kf_logout', { p_token: t });
+  if (mine) setTimeout(flushQueue, 500);
   loadUsers().then(renderAll, renderAll);
 }
 function tryPin() {
@@ -539,7 +689,7 @@ var IC = {
 };
 
 /* ---------- product status ---------- */
-function shownQty(p) { return p.qty + (S.pending[p.upc] || 0); }
+function shownQty(p) { return p.qty + (S.pending[p.upc] || 0) + (S.queued[p.upc] || 0); }
 function status(p) {
   var q = shownQty(p);
   if (q <= 0) return { label: 'Out', cls: 'outs', bar: 'var(--red)', rank: 0 };
@@ -553,6 +703,7 @@ function lowList() { return productList().filter(function (p) { return status(p)
 /* ---------- move rows ---------- */
 function moveRow(m) {
   var t = { in: ['Received', 't-in', 'c-in'], out: ['Pulled', 't-out', 'c-out'], adj: ['Adjusted', 't-adj', 'c-adj'] }[m.type] || ['Move', 't-adj', 'c-adj'];
+  if (m.pending) t = ['Pending', 't-pend', t[2]];
   var pk = m.pack_code && m.pack_qty ? S.packs.get(m.pack_code) : null;
   var sub = [m.pack_qty ? m.pack_qty + ' ' + (pk ? pk.label.toLowerCase() : 'case') + (m.pack_qty === 1 ? '' : 's') + (pk ? ' × ' + pk.size : '') : '', m.reason, m.vendor, m.ref ? 'Ref ' + m.ref : '', m.expires_on ? 'Exp ' + fmtDate(m.expires_on) : ''].filter(Boolean).join(' · ');
   return '<div class="row"><span class="tag ' + t[1] + '">' + t[0] + '</span><div class="grow"><span class="t1">' + esc(m.name) + '</span>' +
@@ -595,7 +746,8 @@ function renderScreen() {
 
 function refresh() {
   if (!S.me) { if (!$('pinpad') && !$('people')) renderAll(); return; }
-  fill('f-banner', !navigator.onLine ? '<div class="banner">You are offline. Changes will not save until the connection is back.</div>' : '');
+  fill('f-banner', queueBanner() +
+    (S.updateReady ? '<div class="banner" style="display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--green-soft);color:var(--green-ink);border-color:#B9DCC8">A new version of the app is ready.<button type="button" class="btn green sm" data-act="reloadApp">Update now</button></div>' : ''));
   fill('f-nav', navView());
   var gb = $('gearBtn'); if (gb) gb.className = 'gear' + (S.screen === 'panel' ? ' on' : '');
   fill('f-lightbox', lightboxHtml());
@@ -689,7 +841,9 @@ function lowHtml() {
 /* scan */
 function scanView() {
   return '<div class="stack"><div class="seg" id="f-seg"></div><div id="f-vendor"></div><div id="f-order"></div>' +
-    '<div class="finder" id="finder"><div id="reader"></div><span class="corner c1"></span><span class="corner c2"></span><span class="corner c3"></span><span class="corner c4"></span><span class="sweep"></span>' +
+    '<div class="finder" id="finder"><div id="reader"></div><div class="guide" id="guide"><span class="sweep"></span></div>' +
+    '<div class="camtop" id="camHint">Fit the barcode inside the box · hold 15–25 cm away · tap to focus</div>' +
+    '<div class="camtools" id="camTools"></div>' +
     '<div class="finder-ui"><button type="button" class="camBtn" id="camBtn" data-act="cam">Use phone camera</button><p>Or scan with a Bluetooth scanner. The code is looked up automatically.</p></div></div>' +
     '<div class="stack" style="gap:6px"><label for="code" style="font-size:13px;font-weight:600;color:var(--muted)">UPC / EAN code</label>' +
     '<div class="inrow"><input id="code" class="inp" inputmode="numeric" autocomplete="off" enterkeyhint="search" placeholder="Scan or type the code" data-bind="code" value="' + esc(S.code) + '">' +
@@ -717,17 +871,29 @@ function deliveryBlock() {
     (local.length ? local.length + ' added' : 'Invoice, packing slip, pallets, damage') + '</span></div><div class="photos"' + (local.length ? '' : ' hidden') + '>';
   local.forEach(function (p, i) {
     h += '<button type="button" class="ph" data-act="viewLocal" data-i="' + i + '" aria-label="View photo ' + (i + 1) + '"><img src="' + esc(p.thumb) + '" alt="">' +
-      (p.state === 'up' ? '<span class="st">Uploading…</span>' : p.state === 'err' ? '<span class="st" style="background:rgba(180,35,24,.75)">Failed</span>' : '') + '</button>';
+      (p.state === 'up' ? '<span class="st">Uploading…</span>' : p.state === 'err' ? '<span class="st" style="background:rgba(180,35,24,.75)">Tap to retry</span>' : '') + '</button>';
   });
   h += '</div><div class="phbtns"><button type="button" class="phbtn main" data-act="shoot"' + (S.vendor ? '' : ' disabled') + '>' + IC.cam + 'Take photo</button>' +
     '<button type="button" class="phbtn" data-act="addPhoto"' + (S.vendor ? '' : ' disabled') + '>' + IC.gallery + 'From gallery</button></div>';
   if (!S.vendor) h += '<span class="t2">Select the vendor first, then add photos.</span>';
   return h;
 }
+function upcEtoA(e) {
+  var ns = e[0], m = e.slice(1, 7), ck = e[7], l = m[5], body;
+  if (l <= '2') body = m.slice(0, 2) + l + '0000' + m.slice(2, 5);
+  else if (l === '3') body = m.slice(0, 3) + '00000' + m.slice(3, 5);
+  else if (l === '4') body = m.slice(0, 4) + '00000' + m[4];
+  else body = m.slice(0, 5) + '0000' + l;
+  return ns + body + ck;
+}
 function findProduct(code) { var f = findCode(code); return f ? f.product : null; }
 function findCode(code) {
   var c = digits(code); if (!c) return null;
-  var tries = [c, '0' + c, c.replace(/^0+/, '')];
+  // the same product can arrive as UPC-A (12), EAN-13 with a leading 0 (13), GTIN-14 (14) or UPC-E (8)
+  var tries = [c, '0' + c, '00' + c, c.replace(/^0+/, '')];
+  if (c[0] === '0') tries.push(c.slice(1));
+  if (c.slice(0, 2) === '00') tries.push(c.slice(2));
+  if (c.length === 8 && (c[0] === '0' || c[0] === '1')) { var a = upcEtoA(c); if (a) tries.push(a, '0' + a); }
   for (var i = 0; i < tries.length; i++) {
     var p = S.products.get(tries[i]); if (p) return { product: p, pack: null };
     var k = S.packs.get(tries[i]); if (k && S.products.get(k.upc)) return { product: S.products.get(k.upc), pack: k };
@@ -799,13 +965,12 @@ function saveFix() {
   var g = orderGroups().filter(function (x) { return x.upc === f.upc; })[0], cur = g ? g.units : 0, delta = n - cur;
   if (!delta) { S.fix = null; refresh(); return; }
   S.busy = true; refresh();
-  rpc('kf_move', { p_upc: f.upc, p_delta: delta, p_type: 'in', p_reason: 'Receiving correction', p_vendor: d.vendor, p_ref: S.ref, p_absolute: null, p_delivery: d.id })
+  var pn = g ? g.name : f.upc;
+  sendMove({ p_upc: f.upc, p_delta: delta, p_type: 'in', p_reason: 'Receiving correction', p_vendor: d.vendor, p_ref: S.ref, p_delivery: d.id }, { delta: delta, name: pn, label: 'Correction · ' + pn + ' to ' + n })
     .then(function (res) {
-      if (res && res.ok === false) { toast('Cannot lower it that much: only ' + res.qty + ' on hand now.', true); return; }
-      var p = S.products.get(f.upc); if (p && res) { p.qty = res.qty; }
-      toast('Order corrected · ' + (g ? g.name : f.upc) + ' now ' + n);
+      if (res && res.ok === false) { toast(res.message || 'Could not save.', true); return; }
+      toast((res && res.queued ? 'Saved on this phone · ' : '') + 'Order corrected · ' + pn + ' now ' + n);
       S.fix = null;
-      return newestMoveIdFor(f.upc);
     })
     .catch(function (e) { toast(errMsg(e), true); })
     .then(function () { S.busy = false; refresh(); });
@@ -1311,9 +1476,10 @@ function ensureDelivery() {
   if (d && d.vendor === S.vendor && d.ref === S.ref) return Promise.resolve(d.id);
   var reuse = d && d.vendor === S.vendor ? d.id : null;
   if (d && d.vendor !== S.vendor) { S.photosLocal = []; S.orderMoves = []; }
-  return rpc('kf_open_delivery', { p_vendor: S.vendor, p_ref: S.ref, p_id: reuse }).then(function (id) {
-    S.delivery = Object.assign({}, d && d.id === id ? d : {}, { id: id, vendor: S.vendor, ref: S.ref }); saveDelivery(); return id;
-  });
+  var id = reuse || uuid();
+  S.delivery = Object.assign({}, reuse ? d : { started_at: new Date().toISOString() }, { id: id, vendor: S.vendor, ref: S.ref }); saveDelivery();
+  enqueue('kf_open_delivery', { p_vendor: S.vendor, p_ref: S.ref, p_id: id }, { label: 'Open order · ' + S.vendor });
+  return Promise.resolve(id);
 }
 function photoApi(body) {
   body.token = S.token;
@@ -1348,7 +1514,7 @@ function blobToB64(blob) {
 var photoQueue = Promise.resolve();
 // target: null = the delivery being received now; a delivery id = an order already received
 function uploadPhoto(source, target, isBlob) {
-  var item = { thumb: URL.createObjectURL(source), state: 'up', url: null, id: null };
+  var item = { thumb: URL.createObjectURL(source), state: 'up', url: null, id: null, src: source, isBlob: isBlob };
   if (!target) S.photosLocal.push(item);
   else if (S.openDel && S.openDel.d.id === target) S.openDel.pending = (S.openDel.pending || []).concat([item]);
   refresh();
@@ -1445,15 +1611,17 @@ function confirmMove() {
   if (out && q > shownQty(p)) { toast('Not enough stock: only ' + shownQty(p) + ' on hand.', true); return; }
   S.busy = true; fill('f-result', resultHtml());
   (out ? Promise.resolve(null) : ensureDelivery())
-    .then(function (did) { return rpc('kf_move', { p_upc: p.upc, p_delta: out ? -q : q, p_type: out ? 'out' : 'in', p_reason: out ? 'Pulled to floor' : 'Receiving', p_vendor: out ? '' : S.vendor, p_ref: out ? '' : S.ref, p_absolute: null, p_delivery: did, p_pack_code: k ? k.code : null, p_pack_qty: k ? cnt : null, p_expires: !out && S.expIn ? S.expIn : null }); })
+    .then(function (did) {
+      var label = (out ? 'Pull −' : 'Receive +') + (k ? cnt + ' ' + k.label.toLowerCase() + (cnt === 1 ? '' : 's') + ' (' + q + ')' : q) + ' · ' + p.name;
+      return sendMove({ p_upc: p.upc, p_delta: out ? -q : q, p_type: out ? 'out' : 'in', p_reason: out ? 'Pulled to floor' : 'Receiving', p_vendor: out ? '' : S.vendor, p_ref: out ? '' : S.ref, p_delivery: did, p_pack_code: k ? k.code : null, p_pack_qty: k ? cnt : null, p_expires: !out && S.expIn ? S.expIn : null },
+        { delta: out ? -q : q, name: p.name, label: label, session: true });
+    })
     .then(function (res) {
-      if (!afterMove(res)) return;
-      p.qty = res.qty; S.products.set(p.upc, p);
-      toast((out ? 'Pulled −' : 'Received +') + (k ? cnt + ' ' + k.label.toLowerCase() + (cnt === 1 ? '' : 's') + ' (' + q + ')' : q) + ' · ' + p.name);
+      if (res && res.ok === false) { toast(res.message || 'Could not save.', true); return; }
+      toast((res && res.queued ? 'Saved on this phone · ' : '') + (out ? 'Pulled −' : 'Received +') + (k ? cnt + ' ' + k.label.toLowerCase() + (cnt === 1 ? '' : 's') + ' (' + q + ')' : q) + ' · ' + p.name);
       if (!out && S.expIn) { p.expires_on = (!p.expires_on || daysUntil(p.expires_on) < 0 || S.expIn < p.expires_on) ? S.expIn : p.expires_on; }
       S.scanned = null; S.code = ''; S.qty = 1; S.expIn = '';
       var ci = $('code'); if (ci) { ci.value = ''; if (!('ontouchstart' in window)) ci.focus(); }
-      return newestMoveIdFor(p.upc);
     })
     .catch(function (e) { toast(errMsg(e), true); })
     .then(function () { S.busy = false; refresh(); });
@@ -1474,17 +1642,22 @@ function createPackReceive(sc) {
     if (unitCode && unitCode === sc.code) { toast('The single item needs a different barcode than the case.', true); return; }
     if (unitCode && findCode(unitCode)) { toast('That single-item barcode already exists. Choose "Existing product".', true); return; }
     unitCode = unitCode || genCode();
-    base = rpc('kf_save_product', { p_old_upc: null, p_upc: unitCode, p_name: n.name.trim(), p_dept: n.dept || depts()[0], p_loc: n.loc, p_unit: 'Each', p_par: 0 }).then(function () { return unitCode; });
+    S.products.set(unitCode, { upc: unitCode, name: n.name.trim(), dept: n.dept || depts()[0], loc: n.loc || 'Unassigned', unit: 'Each', qty: 0, par: 0, image_url: '', expires_on: null });
+    base = enqueue('kf_save_product', { p_old_upc: null, p_upc: unitCode, p_name: n.name.trim(), p_dept: n.dept || depts()[0], p_loc: n.loc, p_unit: 'Each', p_par: 0 }, { label: 'New product · ' + n.name.trim(), okIf: 'DUPLICATE_UPC' })
+      .then(function (r) { savedNew = r; return unitCode; });
   }
+  var savedNew = null;
   S.busy = true; fill('f-result', resultHtml());
   var upcRef;
-  base.then(function (upc) { upcRef = upc; return rpc('kf_save_pack', { p_code: sc.code, p_upc: upc, p_size: size, p_label: n.packLabel }); })
+  base.then(function (upc) {
+      upcRef = upc; S.packs.set(sc.code, { code: sc.code, upc: upc, size: size, label: n.packLabel });
+      return enqueue('kf_save_pack', { p_code: sc.code, p_upc: upc, p_size: size, p_label: n.packLabel }, { label: n.packLabel + ' barcode ' + sc.code });
+    })
     .then(function () { return ensureDelivery(); })
-    .then(function (did) { return rpc('kf_move', { p_upc: upcRef, p_delta: q * size, p_type: 'in', p_reason: 'Receiving', p_vendor: S.vendor, p_ref: S.ref, p_absolute: null, p_delivery: did, p_pack_code: sc.code, p_pack_qty: q, p_expires: n.exp || null }); })
-    .then(function () { return Promise.all([loadProducts(), loadPacks(), newestMoveIdFor(upcRef)]); })
+    .then(function (did) { var pn = (S.products.get(upcRef) || {}).name || upcRef; return sendMove({ p_upc: upcRef, p_delta: q * size, p_type: 'in', p_reason: 'Receiving', p_vendor: S.vendor, p_ref: S.ref, p_delivery: did, p_pack_code: sc.code, p_pack_qty: q, p_expires: n.exp || null }, { delta: q * size, name: pn, label: 'Receive +' + q + ' ' + n.packLabel.toLowerCase() + (q === 1 ? '' : 's') + ' · ' + pn, session: true }); })
     .then(function () {
       var p = S.products.get(upcRef);
-      if (n.link === 'new') flushDraftImage(upcRef);
+      if (n.link === 'new') { if (savedNew && !savedNew.queued && savedNew.ok !== false) flushDraftImage(upcRef); else clearDraftImage(); }
       toast(n.packLabel + ' saved and received +' + q + ' (' + fmtNum(q * size) + ' units) · ' + (p ? p.name : ''));
       S.scanned = null; S.code = ''; S.qty = 1; S.newP = newPDefaults(); var ci = $('code'); if (ci) ci.value = '';
     })
@@ -1505,12 +1678,18 @@ function createReceive() {
     sc.code = typed || genCode();
   }
   S.busy = true; fill('f-result', resultHtml());
-  var dept = S.newP.dept || depts()[0];
-  rpc('kf_save_product', { p_old_upc: null, p_upc: sc.code, p_name: name, p_dept: dept, p_loc: S.newP.loc, p_unit: S.newP.unit, p_par: 0 })
-    .then(function () { return ensureDelivery(); })
-    .then(function (did) { return rpc('kf_move', { p_upc: sc.code, p_delta: q, p_type: 'in', p_reason: 'New product', p_vendor: S.vendor, p_ref: S.ref, p_absolute: null, p_delivery: did, p_expires: S.newP.exp || null }); })
-    .then(function () { return Promise.all([loadProducts(), newestMoveIdFor(sc.code)]); })
-    .then(function () { flushDraftImage(sc.code); toast('Created and received +' + q + ' · ' + name); S.scanned = null; S.code = ''; S.qty = 1; var ci = $('code'); if (ci) ci.value = ''; })
+  var dept = S.newP.dept || depts()[0], code = sc.code, np = S.newP, saved;
+  S.products.set(code, { upc: code, name: name, dept: dept, loc: np.loc || 'Unassigned', unit: np.unit, qty: 0, par: 0, image_url: '', expires_on: null });
+  enqueue('kf_save_product', { p_old_upc: null, p_upc: code, p_name: name, p_dept: dept, p_loc: np.loc, p_unit: np.unit, p_par: 0 }, { label: 'New product · ' + name, okIf: 'DUPLICATE_UPC' })
+    .then(function (r) { saved = r; return ensureDelivery(); })
+    .then(function (did) { return sendMove({ p_upc: code, p_delta: q, p_type: 'in', p_reason: 'New product', p_vendor: S.vendor, p_ref: S.ref, p_delivery: did, p_expires: np.exp || null }, { delta: q, name: name, label: 'Receive +' + q + ' · ' + name, session: true }); })
+    .then(function (res) {
+      var offline = (saved && saved.queued) || (res && res.queued), lostPhoto = false;
+      if (saved && !saved.queued && saved.ok !== false) flushDraftImage(code);
+      else if (S.imgDraft) { clearDraftImage(); lostPhoto = true; }
+      toast((offline ? 'Saved on this phone · ' : '') + 'Created and received +' + q + ' · ' + name + (lostPhoto ? ' · add its photo when back online' : ''));
+      S.scanned = null; S.code = ''; S.qty = 1; var ci = $('code'); if (ci) ci.value = '';
+    })
     .catch(function (e) { toast(errMsg(e), true); })
     .then(function () { S.busy = false; refresh(); });
 }
@@ -1524,9 +1703,8 @@ function quick(upc, n) {
   quickT[upc] = setTimeout(function () {
     var d = S.pending[upc] || 0; delete S.pending[upc];
     if (!d) return;
-    rpc('kf_move', { p_upc: upc, p_delta: d, p_type: 'adj', p_reason: 'Quick adjust', p_vendor: '', p_ref: '', p_absolute: null, p_delivery: null })
-      .then(function (res) { if (res && res.ok === false) { toast('Not enough stock: only ' + res.qty + ' on hand.', true); return; } p.qty = res.qty; })
-      .catch(function (e) { toast(errMsg(e), true); })
+    sendMove({ p_upc: upc, p_delta: d, p_type: 'adj', p_reason: 'Quick adjust' }, { delta: d, name: p.name, label: 'Quick adjust ' + (d > 0 ? '+' : '−') + Math.abs(d) + ' · ' + p.name })
+      .then(function (res) { if (res && res.ok === false) toast(res.message || 'Could not save.', true); })
       .then(refresh);
   }, 700);
 }
@@ -1560,7 +1738,9 @@ function saveProduct() {
 function deleteProduct() {
   var f = S.pform; if (!f || !f.oldUpc) return;
   if (!S.confirmDel) { S.confirmDel = true; refresh(); return; }
-  rpc('kf_delete_product', { p_upc: f.oldUpc })
+  var hadImg = (S.products.get(f.oldUpc) || {}).image_url;
+  (hadImg ? photoApi({ action: 'product_image_delete', upc: f.oldUpc }).catch(function () {}) : Promise.resolve())
+    .then(function () { return rpc('kf_delete_product', { p_upc: f.oldUpc }); })
     .then(function () { S.products.delete(f.oldUpc); toast('Product deleted · ' + f.name); S.pform = null; S.confirmDel = false; })
     .catch(function (e) { toast(errMsg(e), true); }).then(refresh);
 }
@@ -1702,32 +1882,196 @@ function importCsv(file) {
 }
 
 /* ---------- camera ---------- */
-var cam = null, lastHit = 0;
+/* Scanner: full-resolution camera + decoding only the guide box.
+   Android Chrome uses the phone's built-in barcode reader; iPhone/Safari (and anything without it)
+   uses ZXing-C++ compiled to WebAssembly, loaded only when the camera is opened. */
+var BD_URL = 'https://cdn.jsdelivr.net/npm/barcode-detector@3.2.2/dist/iife/ponyfill.js';
+var SCAN_FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf'];
+var RETAIL = { ean_13: 1, ean_8: 1, upc_a: 1, upc_e: 1 };
+var scan = { stream: null, video: null, detector: null, engine: '', timer: 0, busy: false, n: 0, last: '', lastAt: 0, since: 0, torch: false, zoom: 1, caps: {}, cams: [], camIdx: -1, canvas: null, ctx: null, opening: false };
+var cam = null, lastHit = 0; // cam is truthy while the scanner runs (kept for the rest of the app)
+function loadScript(src) {
+  return new Promise(function (res, rej) {
+    if (document.querySelector('script[data-src="' + src + '"]')) { if (window.BarcodeDetectionAPI) return res(); }
+    var el = document.createElement('script'); el.src = src; el.async = true; el.setAttribute('data-src', src);
+    el.onload = function () { res(); }; el.onerror = function () { rej(new Error('SCANNER_LOAD')); };
+    document.head.appendChild(el);
+  });
+}
+function getDetector() {
+  if (scan.detector) return Promise.resolve(scan.detector);
+  var N = window.BarcodeDetector;
+  var nativeCheck = N && N.getSupportedFormats ? N.getSupportedFormats().catch(function () { return []; }) : Promise.resolve([]);
+  return nativeCheck.then(function (sup) {
+    if (sup.indexOf('ean_13') >= 0 && sup.indexOf('upc_a') >= 0) {
+      scan.engine = 'native';
+      return new N({ formats: SCAN_FORMATS.filter(function (f) { return sup.indexOf(f) >= 0; }) });
+    }
+    return loadScript(BD_URL).then(function () {
+      var A = window.BarcodeDetectionAPI; if (!A || !A.BarcodeDetector) throw new Error('SCANNER_LOAD');
+      scan.engine = 'wasm';
+      try { if (A.prepareZXingModule) A.prepareZXingModule({ fireImmediately: true }); } catch (e) {}
+      return new A.BarcodeDetector({ formats: SCAN_FORMATS });
+    });
+  }).then(function (d) { scan.detector = d; return d; });
+}
+function backCameras() {
+  return navigator.mediaDevices.enumerateDevices().then(function (ds) {
+    var cams = ds.filter(function (d) { return d.kind === 'videoinput'; });
+    var back = cams.filter(function (d) { return /back|rear|environment|trasera|traseira/i.test(d.label); });
+    if (!back.length) back = cams;
+    // main lens first: plain "Back Camera" / "camera2 0", then the rest
+    back.sort(function (a, b) {
+      var bad = /ultra|tele|depth|infrared|macro|front/i;
+      return (bad.test(a.label) ? 1 : 0) - (bad.test(b.label) ? 1 : 0) || a.label.localeCompare(b.label);
+    });
+    return back;
+  }).catch(function () { return []; });
+}
+function openStream(deviceId) {
+  var v = { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } };
+  if (deviceId) v.deviceId = { exact: deviceId }; else v.facingMode = { ideal: 'environment' };
+  return navigator.mediaDevices.getUserMedia({ video: v, audio: false });
+}
 function startCam() {
-  var L2 = window.__Html5QrcodeLibrary__ || {};
-  var Lib = window.Html5Qrcode || L2.Html5Qrcode, F = window.Html5QrcodeSupportedFormats || L2.Html5QrcodeSupportedFormats;
-  if (!Lib) { toast('The camera scanner did not load. Use a Bluetooth scanner or type the code.', true); return; }
-  var formats = F ? [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.CODE_128, F.CODE_39, F.ITF] : undefined;
-  try { cam = new Lib('reader', { verbose: false, formatsToSupport: formats, experimentalFeatures: { useBarCodeDetectorIfSupported: true } }); }
-  catch (e) { cam = null; toast('Camera is not available on this device.', true); return; }
-  cam.start({ facingMode: 'environment' }, { fps: 12, qrbox: function (w, h) { return { width: Math.floor(w * 0.85), height: Math.floor(h * 0.55) }; }, aspectRatio: 1.7 }, onCamCode, function () {})
-    .then(function () { var f = $('finder'); if (f) f.classList.add('live'); var b = $('camBtn'); if (b) b.textContent = 'Stop camera'; })
-    .catch(function () { cam = null; toast('Allow camera access in your browser settings, or use a Bluetooth scanner.', true); });
+  if (cam || scan.opening) return;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('This browser cannot open the camera. Use a Bluetooth scanner or type the code.', true); return; }
+  if (!window.isSecureContext) { toast('The camera only works on the https:// link of the app.', true); return; }
+  scan.opening = true;
+  var b = $('camBtn'); if (b) b.textContent = 'Starting camera…';
+  var saved = null; try { saved = localStorage.getItem('kf_cam'); } catch (e) {}
+  getDetector().then(function () { return openStream(saved); })
+    .catch(function (e) { if (saved && e && e.name !== 'NotAllowedError') { try { localStorage.removeItem('kf_cam'); } catch (x) {} return openStream(null); } throw e; })
+    .then(function (st) { return attachStream(st).then(function () { return backCameras(); }); })
+    .then(function (cams) {
+      scan.cams = cams;
+      var cur = scan.stream && scan.stream.getVideoTracks()[0], curId = cur && cur.getSettings ? cur.getSettings().deviceId : null;
+      scan.camIdx = cams.findIndex(function (c) { return c.deviceId === curId; });
+      // Android often opens the ultra-wide lens (blurry up close): switch to the main lens once, if we know it
+      if (!saved && cams.length > 1 && scan.camIdx > 0 && /android/i.test(navigator.userAgent)) return switchLens(0, true);
+    })
+    .then(function () { scan.opening = false; camTools(); })
+    .catch(function (e) {
+      scan.opening = false; stopCam();
+      var m = e && e.name === 'NotAllowedError' ? 'Camera permission is off. Allow the camera for this site in your browser settings.'
+        : e && e.message === 'SCANNER_LOAD' ? 'The scanner could not load. Check the connection, or use a Bluetooth scanner.'
+        : 'Could not open the camera. Close other apps using it and try again.';
+      toast(m, true);
+    });
+}
+function attachStream(st) {
+  scan.stream = st; cam = true;
+  var r = $('reader'); if (!r) { stopCam(); return Promise.resolve(); }
+  var v = document.createElement('video');
+  v.setAttribute('playsinline', ''); v.setAttribute('muted', ''); v.setAttribute('autoplay', ''); v.muted = true; v.playsInline = true;
+  v.srcObject = st; r.innerHTML = ''; r.appendChild(v); scan.video = v;
+  v.addEventListener('click', tapFocus);
+  var f = $('finder'); if (f) f.classList.add('live');
+  var tr = st.getVideoTracks()[0];
+  scan.caps = tr && tr.getCapabilities ? tr.getCapabilities() : {};
+  var adv = {};
+  if (scan.caps.focusMode && scan.caps.focusMode.indexOf('continuous') >= 0) adv.focusMode = 'continuous';
+  scan.zoom = 1;
+  if (scan.caps.zoom && scan.caps.zoom.max >= 1.5) { scan.zoom = Math.min(1.6, scan.caps.zoom.max); adv.zoom = scan.zoom; }
+  var applied = Object.keys(adv).length ? tr.applyConstraints({ advanced: [adv] }).catch(function () { scan.zoom = 1; }) : Promise.resolve();
+  scan.since = Date.now(); scan.n = 0; scan.last = ''; scan.torch = false;
+  return applied.then(function () { var pl = v.play(); return pl && pl.catch ? pl.catch(function () {}) : null; })
+    .then(function () { clearTimeout(scan.timer); scan.timer = setTimeout(scanTick, 250); camTools(); });
+}
+function camTools() {
+  var t = $('camTools'); if (!t) return;
+  var h = '';
+  if (scan.caps.torch) h += '<button type="button" class="' + (scan.torch ? 'on' : '') + '" data-act="camTorch">Light</button>';
+  if (scan.caps.zoom && scan.caps.zoom.max >= 1.5) h += '<button type="button" data-act="camZoom">' + (scan.zoom > 1.2 ? '1×' : Math.min(2, scan.caps.zoom.max) + '×') + '</button>';
+  if (scan.cams.length > 1) h += '<button type="button" data-act="camLens">Switch lens</button>';
+  h += '<button type="button" data-act="cam">Stop</button>';
+  t.innerHTML = h;
+}
+function switchLens(idx, silent) {
+  if (!scan.cams.length) return Promise.resolve();
+  var i = typeof idx === 'number' ? idx : (scan.camIdx + 1) % scan.cams.length, c = scan.cams[i];
+  if (scan.stream) scan.stream.getTracks().forEach(function (tk) { tk.stop(); });
+  return openStream(c.deviceId).then(function (st) {
+    scan.camIdx = i; try { localStorage.setItem('kf_cam', c.deviceId); } catch (e) {}
+    return attachStream(st);
+  }).then(function () { if (!silent) toast('Lens ' + (i + 1) + ' of ' + scan.cams.length + (c.label ? ' · ' + c.label : '')); })
+    .catch(function () { if (!silent) toast('That lens could not open. Try the next one.', true); });
+}
+function tapFocus() {
+  var tr = scan.stream && scan.stream.getVideoTracks()[0]; if (!tr || !scan.caps.focusMode) return;
+  var modes = scan.caps.focusMode;
+  if (modes.indexOf('single-shot') >= 0) tr.applyConstraints({ advanced: [{ focusMode: 'single-shot' }] })
+    .then(function () { setTimeout(function () { if (modes.indexOf('continuous') >= 0) tr.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(function () {}); }, 1500); }).catch(function () {});
+}
+// The box the user sees, translated into camera pixels (the video is cropped to fill the finder).
+function guideRect(v) {
+  var f = $('finder'), g = $('guide'); if (!f || !g) return null;
+  var fr = f.getBoundingClientRect(), gr = g.getBoundingClientRect();
+  var vw = v.videoWidth, vh = v.videoHeight, k = Math.max(fr.width / vw, fr.height / vh);
+  var ox = (fr.width - vw * k) / 2, oy = (fr.height - vh * k) / 2;
+  var padX = gr.width * 0.08, padY = gr.height * 0.2;
+  var x = (gr.left - fr.left - padX - ox) / k, y = (gr.top - fr.top - padY - oy) / k;
+  var w = (gr.width + padX * 2) / k, h = (gr.height + padY * 2) / k;
+  x = Math.max(0, x); y = Math.max(0, y); w = Math.min(vw - x, w); h = Math.min(vh - y, h);
+  return { x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h) };
+}
+function sharpenImage(img) {
+  var w = img.width, h = img.height, d = img.data, g = new Float32Array(w * h), i;
+  for (i = 0; i < w * h; i++) g[i] = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2];
+  var out = new ImageData(w, h), o = out.data;
+  for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
+    i = y * w + x; var v = g[i];
+    if (x > 0 && y > 0 && x < w - 1 && y < h - 1) v = 5 * g[i] - g[i - 1] - g[i + 1] - g[i - w] - g[i + w];
+    v = v < 0 ? 0 : v > 255 ? 255 : v; o[i * 4] = o[i * 4 + 1] = o[i * 4 + 2] = v; o[i * 4 + 3] = 255;
+  }
+  return out;
+}
+function scanTick() {
+  if (!cam || !scan.stream) return;
+  scan.timer = setTimeout(scanTick, scan.engine === 'native' ? 80 : 110);
+  var v = scan.video; if (scan.busy || document.hidden || !v || !v.videoWidth || !scan.detector) return;
+  scan.n++;
+  var full = scan.n % 7 === 0, r = full ? { x: 0, y: 0, w: v.videoWidth, h: v.videoHeight } : guideRect(v);
+  if (!r || r.w < 20 || r.h < 20) return;
+  var k = Math.min(1, (full ? 1280 : 1920) / r.w), cw = Math.round(r.w * k), ch = Math.round(r.h * k);
+  if (!scan.canvas) { scan.canvas = document.createElement('canvas'); scan.ctx = scan.canvas.getContext('2d', { willReadFrequently: true }); }
+  if (scan.canvas.width !== cw || scan.canvas.height !== ch) { scan.canvas.width = cw; scan.canvas.height = ch; }
+  scan.ctx.drawImage(v, r.x, r.y, r.w, r.h, 0, 0, cw, ch);
+  var img = scan.ctx.getImageData(0, 0, cw, ch);
+  if (!full && scan.n % 2 === 0) img = sharpenImage(img); // every other frame: rescue slightly blurry codes
+  scan.busy = true;
+  scan.detector.detect(img).then(onDetect).catch(function () {}).then(function () { scan.busy = false; });
+  if (Date.now() - scan.since > 9000) {
+    var hint = $('camHint');
+    if (hint) hint.textContent = 'Not reading? Move back a little until it is sharp' + (scan.caps.torch ? ', turn on Light' : '') + (scan.cams.length > 1 ? ', or Switch lens' : '');
+  }
+}
+function onDetect(list) {
+  if (!cam || !list || !list.length) return;
+  var best = null;
+  list.forEach(function (r) { var val = String(r.rawValue || '').trim(); if (val && (!best || RETAIL[r.format])) best = { val: val, fmt: r.format }; });
+  if (!best) return;
+  var now = Date.now();
+  // retail codes carry a check digit, so one read is enough; other formats must read the same twice
+  if (!RETAIL[best.fmt] && !(scan.last === best.val && now - scan.lastAt < 1500)) { scan.last = best.val; scan.lastAt = now; return; }
+  if (now - lastHit < 1500) return; lastHit = now;
+  var g = $('guide'); if (g) g.classList.add('hit');
+  beep(); stopCam(); lookup(best.val);
 }
 function stopCam() {
-  if (!cam) return;
-  var c = cam; cam = null;
-  c.stop().then(function () { try { c.clear(); } catch (e) {} }).catch(function () {});
-  var f = $('finder'); if (f) f.classList.remove('live'); var b = $('camBtn'); if (b) b.textContent = 'Use phone camera';
+  clearTimeout(scan.timer); scan.busy = false;
+  if (scan.stream) scan.stream.getTracks().forEach(function (t) { t.stop(); });
+  scan.stream = null; scan.video = null; cam = null;
+  var r = $('reader'); if (r) r.innerHTML = '';
+  var f = $('finder'); if (f) f.classList.remove('live');
+  var g = $('guide'); if (g) g.classList.remove('hit');
+  var b = $('camBtn'); if (b) b.textContent = 'Use phone camera';
+  var hint = $('camHint'); if (hint) hint.textContent = 'Fit the barcode inside the box · hold 15–25 cm away · tap to focus';
 }
 function beep() {
   try { var A = window.AudioContext || window.webkitAudioContext; var ctx = new A(), o = ctx.createOscillator(), g = ctx.createGain();
     o.frequency.value = 1240; g.gain.value = 0.08; o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + 0.09); } catch (e) {}
   if (navigator.vibrate) navigator.vibrate(60);
-}
-function onCamCode(text) {
-  if (Date.now() - lastHit < 1500) return; lastHit = Date.now();
-  beep(); stopCam(); lookup(text);
 }
 
 /* ---------- events ---------- */
@@ -1745,7 +2089,10 @@ document.addEventListener('click', function (e) {
     case 'go': go(d.s, { tab: d.tab, filter: d.filter }); break;
     case 'start': S.mode = d.mode; go('scan'); break;
     case 'mode': S.mode = d.mode; refresh(); break;
-    case 'cam': if (cam) stopCam(); else startCam(); break;
+    case 'cam': if (cam || scan.opening) stopCam(); else startCam(); break;
+    case 'camTorch': var tt = scan.stream && scan.stream.getVideoTracks()[0]; if (tt) { scan.torch = !scan.torch; tt.applyConstraints({ advanced: [{ torch: scan.torch }] }).catch(function () {}); camTools(); } break;
+    case 'camZoom': var tz = scan.stream && scan.stream.getVideoTracks()[0]; if (tz && scan.caps.zoom) { scan.zoom = scan.zoom > 1.2 ? 1 : Math.min(2, scan.caps.zoom.max); tz.applyConstraints({ advanced: [{ zoom: scan.zoom }] }).catch(function () {}); camTools(); } break;
+    case 'camLens': switchLens(); break;
     case 'lookup': lookup(($('code') || {}).value); break;
     case 'qty': S.qty = Math.max(1, (parseInt(S.qty, 10) || 0) + parseInt(d.n, 10)); var rr = $('f-result'); if (rr) rr.innerHTML = resultHtml(); break;
     case 'cancelScan': clearDraftImage(); S.expIn = ''; S.scanned = null; S.code = ''; S.qty = 1; var ci = $('code'); if (ci) ci.value = ''; refresh(); break;
@@ -1775,7 +2122,7 @@ document.addEventListener('click', function (e) {
     case 'importCsv': $('csvFile').click(); break;
     case 'addPhoto': if (!S.vendor) { toast('Select the vendor for this delivery first.', true); break; } S.pickTarget = null; $('photoFile').click(); break;
     case 'finishDelivery': finishDelivery(); break;
-    case 'viewLocal': var lp = S.photosLocal[parseInt(d.i, 10)]; if (lp) { S.lightbox = { url: lp.url || lp.thumb, id: lp.id || null, local: true }; S.confirmDel = false; refresh(); } break;
+    case 'viewLocal': var lp = S.photosLocal[parseInt(d.i, 10)]; if (lp && lp.state === 'err' && lp.src) { S.photosLocal.splice(parseInt(d.i, 10), 1); uploadPhoto(lp.src, null, lp.isBlob); break; } if (lp) { S.lightbox = { url: lp.url || lp.thumb, id: lp.id || null, local: true }; S.confirmDel = false; refresh(); } break;
     case 'shoot': openShooter(null); break;
     case 'shootOrder': if (S.openDel) openShooter(S.openDel.d.id); break;
     case 'galleryOrder': if (S.openDel) { S.pickTarget = S.openDel.d.id; $('photoFile').click(); } break;
@@ -1784,6 +2131,9 @@ document.addEventListener('click', function (e) {
     case 'shotTorch': toggleTorch(); break;
     case 'exportOrder': exportOrder(); break;
     case 'resumeOrder': resumeOrder(); break;
+    case 'reloadApp': location.reload(); break;
+    case 'qShow': S.showFailed = !S.showFailed; refresh(); break;
+    case 'qClear': Q.failed = []; S.showFailed = false; qSave(); refresh(); break;
     case 'imgShoot': openShooter(null, 'product', d.ctx); break;
     case 'imgPick': S.pickTarget = { kind: 'product', ctx: d.ctx }; $('photoFile').click(); break;
     case 'imgRemove':
@@ -1893,18 +2243,40 @@ document.addEventListener('keydown', function (e) {
   }
 });
 
+/* ---------- update check ---------- */
+var APP_VERSION = (document.querySelector('meta[name="app-version"]') || {}).content || '';
+function checkUpdate() {
+  if (!APP_VERSION || S.updateReady || !navigator.onLine) return;
+  fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : ''; }).then(function (t) {
+    var m = t.match(/<meta name="app-version" content="([^"]+)"/);
+    if (m && m[1] !== APP_VERSION) { S.updateReady = true; soon(); }
+  }).catch(function () {});
+}
+setInterval(checkUpdate, 5 * 60000);
+document.addEventListener('visibilitychange', function () { if (!document.hidden) checkUpdate(); });
+
 /* ---------- boot ---------- */
 (function boot() {
+  recalcQueued();
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(function () {});
   var saved = null; try { saved = localStorage.getItem('kf_token'); } catch (e) {}
   renderAll();
   loadSettings().catch(function () {}).then(function () {
-    if (!saved) return loadUsers().then(renderAll);
+    if (!saved) return loadUsers().then(renderAll, function () { loadCache(); renderAll(); });
     return sb.rpc('kf_session', { p_token: saved }).then(function (r) {
+      if (r.error && isNetErr(r.error)) return offlineStart(saved);
       if (r.error || !r.data) { try { localStorage.removeItem('kf_token'); } catch (e) {} return loadUsers().then(renderAll); }
       S.token = saved; S.me = r.data; renderAll();
       return loadAll().then(function () { subscribe(); renderAll(); });
-    });
-  }).catch(function (e) { S.loginMsg = errMsg(e); renderAll(); });
+    }, function () { return offlineStart(saved); });
+  }).catch(function (e) { if (saved && isNetErr(e)) return offlineStart(saved); S.loginMsg = errMsg(e); renderAll(); });
+  function offlineStart(token) {
+    var c = loadCache();
+    if (!c || !c.me) { S.loginMsg = 'No connection. Connect once to sign in.'; renderAll(); return; }
+    S.token = token; S.me = c.me; recalcQueued(); syncPending(); loadOrderMoves().catch(function () {}); renderAll();
+    toast('Offline · showing the copy saved ' + fmtWhen(c.at));
+    window.addEventListener('online', function once() { window.removeEventListener('online', once); loadAll().then(function () { subscribe(); renderAll(); }).catch(function () {}); });
+  }
 })();
 
 })();
